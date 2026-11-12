@@ -28,4 +28,4 @@ if(!items.length)return '<p>Снимков нет.</p>';
 return PHOTO_CATEGORIES_V08.map(([category,label])=>{const photos=items.filter(x=>getPhotoCategoryV08(x)===category);if(!photos.length)return '';return '<h3>'+html(label)+'</h3>'+photos.map((x,i)=>'<figure class="photo"><img src="'+x.data+'" alt="Фото"><figcaption>'+html(label)+', фото '+(i+1)+'. '+html(x.comment||x.name||'Без описания')+'</figcaption></figure>').join('')}).join('');
 }
 document.addEventListener('click',e=>{const t=e.target.closest('[data-photo-category]');if(t&&validCategoryV08(t.dataset.photoCategory)){photoCategoryV08=t.dataset.photoCategory;render()}});
-document.addEventListener('change',e=>{if(e.target?.dataset?.path?.startsWith('photo.')&&e.target.dataset.path.endsWith('.category'))queueMicrotask(()=>render())});
+document.addEventListener('change',e=>{if(e.target?.dataset?.path?.startsWith('photo.')&&e.target.dataset.path.endsWith('.category')){const id=e.target.dataset.path.split('.')[1];const photo=project.photos.find(x=>x.id===id);if(photo)photo.type=e.target.value==='thermal'?'thermal':'regular';scheduleSave();queueMicrotask(()=>render())}});
