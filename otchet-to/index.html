@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-report-version="2" data-release="2.4.1">
+<html lang="ru" data-report-version="2" data-release="2.4.2">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="Отчёт ТО"/>
 <meta name="theme-color" content="#0F1C2E"/>
-<title>Акт ТО ЦКП · 2.4.1</title>
+<title>Акт ТО ЦКП · 2.4.2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -298,6 +298,16 @@ body{font-family:var(--font);background:#E8EEF4;color:var(--text);min-height:100
 .pdf-table thead th:last-child{border-radius:0 6px 0 0}
 .pdf-table tbody tr:nth-child(odd) td{background:#F8FAFB}
 .pdf-table tbody td{padding:5px 8px;border-bottom:1px solid var(--gray2);vertical-align:middle;font-size:11px}
+/* All-hall brightness summary only */
+.pdf-summary-fl{table-layout:fixed}
+.pdf-summary-fl thead th{font-size:10.5px;text-transform:none}
+.pdf-summary-fl th:nth-child(n+3),.pdf-summary-fl td:nth-child(n+3){text-align:center}
+.pdf-summary-fl tbody td{overflow-wrap:anywhere}
+.pdf-summary-fl tbody tr td[data-change="up"]{background:#E6F4E9}
+.pdf-summary-fl tbody tr td[data-change="same"]{background:#FFF5D9}
+.pdf-summary-fl tbody tr td[data-change="down"]{background:#FCE7E7}
+.pdf-summary-fl tbody td:last-child{font-weight:700}
+.pdf-summary-fl-note{font-size:10px;color:#475569}
 .pdf-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:20px;font-size:9.5px;font-weight:700;white-space:nowrap}
 .badge-ok{background:#D1FAE5;color:#065F46}
 .badge-warn{background:#FEF3C7;color:#92400E}
@@ -1741,6 +1751,59 @@ function appendProjectorNotes(C,h){
     ...(h.importNotes||[]).map(n=>['Примечание из добавленного акта',n])
   ].filter(([,v])=>v?.trim()));
 }
+function summaryBrightnessRows(selectedHalls){
+  const formatPercent=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2,signDisplay:'exceptZero'});
+  const parseFL=value=>{
+    const match=value.match(/^([+]?\d+(?:[.,]\d+)?|[+]?[.,]\d+)\s*(?:fl|фл)?$/iu);
+    return match?Number(match[1].replace(',','.')):NaN;
+  };
+  return selectedHalls.flatMap(([h,i])=>{
+    const f=h.fields||{}, label=projectorLabel(h,i);
+    const with3D=f.f_has3d==='yes'||(f.f_has3d===undefined&&[f.f_3d,f.f_3dsn].some(v=>String(v??'').trim()));
+    const conflicts=new Set(validMergeConflicts(h.mergeConflicts).map(r=>r.label));
+    const rows=IMG_PARAMS.slice(0,4).flatMap((p,j)=>{
+      if(p.only3D&&!with3D)return [];
+      const before=String(f['mv_imgTable_'+j+'_b']??'').trim();
+      const after=String(f['mv_imgTable_'+j+'_a']??'').trim();
+      if(!before&&!after)return [];
+      const b=parseFL(before),a=parseFL(after), change=(a-b)/b*100;
+      const disputed=conflicts.has(p.name+' — до')||conflicts.has(p.name+' — после');
+      const valid=!disputed&&b>0&&Number.isFinite(change);
+      const tone=!valid?'':a>b?'up':a<b?'down':'same';
+      const percentage=!valid?'—':change!==0&&Math.abs(change)<0.005
+        ?(change>0?'+':'−')+'<0,01 %':formatPercent.format(change)+' %';
+      return [{label,group:i,format:p.name.replace('Освещённость экрана ',''),before,after,tone,percentage,disputed}];
+    });
+    return rows.length?rows:[{label,group:i,format:'—',before:'',after:'',tone:'',percentage:'—',disputed:false}];
+  });
+}
+function appendSummaryBrightness(C,selectedHalls,stripHall){
+  const rows=summaryBrightnessRows(selectedHalls);
+  const render=(start,count)=>{
+    const slice=rows.slice(start,start+count);
+    const tableRows=slice.map((r,i)=>{
+      const first=i===0||slice[i-1].group!==r.group;
+      const tone=r.tone?' data-change="'+r.tone+'"':'';
+      return '<tr><td>'+esc(first?r.label:'')+'</td><td>'+esc(r.format)+'</td><td>'+esc(r.before||'—')+'</td><td'+tone+'>'+esc(r.after||'—')+'</td><td'+tone+'>'+esc(r.percentage)+'</td></tr>';
+    }).join('');
+    const note='Процент рассчитан относительно замера до ТО. Прочерк — нет сопоставимых замеров или «Было FL» равно нулю.'+
+      (slice.some(r=>r.disputed)?' Расходящиеся замеры приведены в разделе «Расхождения при объединении».':'');
+    return pdfPage('',start?'Сравнение яркости по залам · продолжение':'Сравнение яркости по залам',
+      '<table class="pdf-table pdf-summary-fl"><colgroup><col style="width:36%"><col style="width:16%"><col style="width:16%"><col style="width:16%"><col style="width:16%"></colgroup>'+
+      '<thead><tr><th>Зал / проектор</th><th>Формат</th><th>Было FL</th><th>Стало FL</th><th>Изменение, %</th></tr></thead><tbody>'+tableRows+'</tbody></table>'+
+      '<p class="pdf-summary-fl-note">'+note+'</p>');
+  };
+  for(let start=0;start<rows.length;){
+    let count=Math.min(23,rows.length-start);
+    C.insertAdjacentHTML('beforeend',render(start,count));
+    while(count>1&&C.lastElementChild.offsetHeight>794){
+      count--;
+      C.lastElementChild.outerHTML=render(start,count);
+    }
+    stripHall(C.lastElementChild);
+    start+=count;
+  }
+}
 function appendSummary(C,h,i){
   const f=h.fields||{};
   const row=(label,b,a)=>'<tr><td>'+esc(label)+'</td><td>'+esc(String(b??'').trim()||'нет данных')+'</td><td>'+esc(String(a??'').trim()||'нет данных')+'</td></tr>';
@@ -1769,6 +1832,7 @@ function buildPDFPages(mode='full',selected=null){
   stripHall(C.lastElementChild);
   try{
     selectedHalls.sort(([a,ai],[b,bi])=>hallKey(a).localeCompare(hallKey(b),'ru',{numeric:true})||ai-bi);
+    if(mode==='summary')appendSummaryBrightness(C,selectedHalls,stripHall);
     selectedHalls.forEach(([h,i])=>{
       hallIndex=i;restoreHall();
       if(mode==='summary'){appendSummary(C,h,i);appendMergePDF(C,h);return;}
