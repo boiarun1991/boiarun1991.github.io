@@ -358,9 +358,7 @@ body{font-family:var(--font);background:#E8EEF4;color:var(--text);min-height:100
   </div>
   <div class="top-actions">
     <button class="btn btn-ghost hide-mobile" onclick="resetForm()">↺</button>
-    <button class="btn btn-primary" onclick="saveDraft()">💾</button>
-    <button class="btn btn-ghost" onclick="saveAsHTML()" title="Сохранить заполненный HTML">⬇ HTML</button>
-    <button id="topExport" hidden class="btn btn-accent" onclick="exportPDF()">⬇ PDF</button>
+    
   </div>
 </div>
 
@@ -488,6 +486,11 @@ body{font-family:var(--font);background:#E8EEF4;color:var(--text);min-height:100
     <div class="module-actions"><button class="btn btn-primary" onclick="toggleWorks(true)">Выполнено всё</button><button class="btn btn-ghost" onclick="toggleWorks(false)">Не выполнено всё</button></div>
     <div class="photo-hint">Статусы фильтров выбираются по факту отдельно.</div><div id="workChecks"></div>
     <div id="filtersWrap" style="margin-bottom:16px"></div>
+    <div class="notes-grid">
+      <div class="field"><label for="hall_faults">Неисправности</label><textarea id="hall_faults" rows="3" placeholder="Если неисправностей нет, укажи «Нет»"></textarea></div>
+      <div class="field"><label for="hall_replacements">Замены</label><textarea id="hall_replacements" rows="3" placeholder="Если замен нет, укажи «Нет»"></textarea></div>
+      <div class="field"><label for="hall_notes">Примечания по залу / проектору</label><textarea id="hall_notes" rows="3"></textarea></div>
+    </div>
     <table class="works-table">
       <thead><tr>
         <th style="width:45px">В акт</th>
@@ -560,8 +563,34 @@ body{font-family:var(--font);background:#E8EEF4;color:var(--text);min-height:100
   <div class="nav-btns">
     <button class="btn btn-ghost" onclick="goStep(6)">← Назад</button>
     <div class="step-info">Шаг 7 / 7</div>
-    <button class="btn btn-accent" onclick="exportPDF()">⬇ Экспорт PDF</button>
+    <button class="btn btn-primary" onclick="goStep(8)">Далее →</button>
   </div>
+</div>
+<div class="section-card" id="secReport">
+  <div class="sec-header"><div class="sec-badge">9</div><div class="sec-title">Формирование отчёта</div></div>
+  <div class="sec-body">
+    <div class="subsec-title">PDF</div>
+    <div class="field"><label for="fullHall">Залы для полного отчёта</label><select id="fullHall"></select></div>
+    <div class="module-actions">
+      <button class="btn btn-accent" onclick="exportPDF('full')">Полный PDF</button>
+      <button class="btn btn-accent" onclick="exportPDF('summary')">Сводный PDF по всем залам</button>
+    </div>
+    <p class="photo-hint">Полный отчёт включает фотографии. Сводный — яркость, звук, неисправности, замены и примечания по каждому залу без фото.</p>
+    <div class="subsec-title">Черновик и обмен между телефонами</div>
+    <div class="module-actions">
+      <button class="btn btn-primary" onclick="saveDraft()">Сохранить черновик</button>
+      <button class="btn btn-ghost" onclick="saveAsHTML()">Скачать заполненный HTML</button>
+      <button class="btn btn-ghost" onclick="shareReport()">Поделиться данными ТО</button>
+      <button class="btn btn-primary" onclick="document.getElementById('importFile').click()">Добавить отчёт с другого телефона</button>
+      <input type="file" hidden id="importFile" accept=".json,.html,.htm,application/json,text/html" onchange="readImport(this)">
+    </div>
+    <p class="photo-hint">Передай файл данных ТО или заполненный HTML на второй телефон. PDF не подходит для объединения.</p>
+    <div id="importPreview" hidden>
+      <p id="importDescription" style="white-space:pre-line;overflow-wrap:anywhere" role="status"></p>
+      <div class="module-actions"><button class="btn btn-primary" id="confirmImport" onclick="mergeImport()">Добавить проекторы</button><button class="btn btn-ghost" onclick="clearImport()">Отмена</button></div>
+    </div>
+  </div>
+  <div class="nav-btns"><button class="btn btn-ghost" onclick="goStep(7)">← Назад</button><div class="step-info"></div></div>
 </div>
 </div><!-- /main -->
 
@@ -650,8 +679,8 @@ const SW_LABELS=['ПО проектора актуально','ПО плей с�
 //  NAVIGATION
 // ═══════════════════════════════════════════════════════════
 let currentStep=0;
-const stepCards=['welcome','sec0','sec1','sec3','sec4','sec5','sec5','sec6'];
-const stepLabels=['Карточка ТО','Оборудование','ПО','Параметры','Работы','Фото до ТО','Фото после ТО','Подписи'];
+const stepCards=['welcome','sec0','sec1','sec3','sec4','sec5','sec5','sec6','secReport'];
+const stepLabels=['Карточка ТО','Оборудование','ПО','Параметры','Работы','Фото до ТО','Фото после ТО','Подписи','Формирование отчёта'];
 let unlocked=false, hallIndex=0, halls=[{}], engineers=[{name:'',date:'',sign:''}];
 const sharedIds=['f_date','f_city','f_cinema','f_address','f_notes','f_notes2','sig2_name','sig2_date','sig2_sign','sig3_name','sig3_date','sig3_sign'];
 const hallSections='#sec0,#sec1,#sec3,#sec4';
@@ -671,7 +700,7 @@ function goStep(n){
   document.querySelectorAll('.section-card').forEach(c=>c.classList.toggle('active',c===active));
   active.querySelector('.sec-badge').textContent=n+1;
   active.querySelector('.step-info').textContent='Шаг '+(n+1)+' / '+stepCards.length;
-  document.getElementById('topExport').hidden=n!==7;
+  if(n===8)renderReportOptions();
   renderNavigation();
   document.getElementById('progressFill').style.width=((n+1)/stepCards.length*100)+'%';
   if(n===5||n===6){document.getElementById('photoTitle').textContent=stepLabels[n];renderGallery();}
@@ -691,7 +720,8 @@ function renderNavigation(){
   if(currentStep>0&&currentStep<7){
     const sel=document.createElement('select');
     sel.setAttribute('aria-label','Выбрать зал');
-    halls.forEach((h,i)=>{const name=(i===hallIndex?g('f_hall'):h.fields?.f_hall)?.trim();sel.add(new Option(name?'Зал '+name:'Зал '+(i+1)+' (без номера)',i,false,i===hallIndex));});
+    storeHall();
+    halls.forEach((h,i)=>sel.add(new Option(projectorLabel(h,i),i,false,i===hallIndex)));
     sel.onchange=()=>switchHall(Number(sel.value));
     nav.append(sel);
   }
@@ -750,6 +780,10 @@ function buildFiltersTable(){
     tr.dataset.filterName=name;
     tr.innerHTML='<td>'+(custom?'<input type="text" id="'+pre+'_name" aria-label="Название фильтра" placeholder="Название фильтра">':esc(name))+'</td>'+
       STATUSES.map(([st,l])=>'<td><label><input type="checkbox" aria-label="'+l+'" id="'+pre+'_'+st+'"></label></td>').join('');
+    tr.addEventListener('change',e=>{
+      if(e.target.type==='checkbox'&&e.target.checked)
+        tr.querySelectorAll('input[type=checkbox]').forEach(other=>{if(other!==e.target)other.checked=false;});
+    });
     tb.append(tr);
   };
   modelFilters().forEach(row=>add(row));
@@ -1086,7 +1120,7 @@ function storeHall(){
     const selected=el.querySelector('.sel-ok,.sel-warn,.sel-err');
     if(selected)statuses[el.id]=selected.textContent.trim();
   });
-  halls[hallIndex]={fields,statuses,workCount,customFilters,detailPhotos,photos,swScreenshots};
+  halls[hallIndex]={id:halls[hallIndex].id||newProjectorId(),fields,statuses,workCount,customFilters,detailPhotos,photos,swScreenshots,importNotes:halls[hallIndex].importNotes||[]};
 }
 function restoreHall(){
   const h=halls[hallIndex], fields=h.fields||{};
@@ -1112,6 +1146,9 @@ function restoreHall(){
   document.querySelectorAll('#filtersWrap input').forEach(el=>{
     if(el.type==='checkbox')el.checked=!!fields[el.id];else el.value=fields[el.id]??'';
   });
+  document.querySelectorAll('#filtersWrap [data-filter-id]').forEach(tr=>{
+    [...tr.querySelectorAll('input[type=checkbox]:checked')].slice(0,-1).forEach(el=>el.checked=false);
+  });
   document.querySelectorAll('.status-btns[id]').forEach(el=>{
     el.querySelectorAll('.status-btn').forEach(btn=>{
       btn.classList.remove('sel-ok','sel-warn','sel-err');
@@ -1133,7 +1170,7 @@ function removeHall(){
 }
 function reportData(){
   storeHall();
-  return {version:2,halls,hallIndex,engineers,unlocked,shared:Object.fromEntries(sharedIds.map(id=>[id,g(id)]))};
+  return {version:3,halls,hallIndex,engineers,unlocked,shared:Object.fromEntries(sharedIds.map(id=>[id,g(id)]))};
 }
 function legacyReport(pd){
   const fields=pd.fields||{}, first=fields.f_engineer||fields.sig1_name||'';
@@ -1141,7 +1178,7 @@ function legacyReport(pd){
     halls:[{fields,photos:pd.photos,swScreenshots:pd.swshots,detailPhotos:fields.__detailPhotos,customFilters:fields.__customFilters,workCount:fields.__wc,statuses:fields.__sb}]};
 }
 function applyReport(data){
-  if(data.version!==2)data=legacyReport(data);
+  if(data.version!==2&&data.version!==3)data=legacyReport(data);
   if(data.halls?.length)halls=data.halls;
   hallIndex=halls[data.hallIndex]?data.hallIndex:0;
   if(data.engineers?.length)engineers=data.engineers;
@@ -1149,6 +1186,108 @@ function applyReport(data){
   unlocked=!!data.unlocked;
   renderEngineers();restoreHall();
 }
+function newProjectorId(){
+  return globalThis.crypto?.randomUUID?.()||Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
+}
+const normalized=v=>String(v??'').trim().toLocaleLowerCase('ru').replace(/ё/g,'е').replace(/\s+/g,' ');
+const hallKey=h=>normalized(h.fields?.f_hall).replace(/^0+(?=\d+$)/,'');
+function projectorLabel(h,i){
+  const f=h.fields||{};
+  return [f.f_hall?.trim()?'Зал '+f.f_hall.trim():'Зал без номера ('+(i+1)+')',f.f_projmodel||f.f_brand,f.f_projsn&&'с/н '+f.f_projsn].filter(Boolean).join(' · ');
+}
+function renderReportOptions(){
+  storeHall();
+  const sel=document.getElementById('fullHall'), previous=sel.value;
+  sel.replaceChildren(new Option('Все залы','all'));
+  const keys=[...new Map(halls.map(h=>[hallKey(h),h.fields.f_hall?.trim()||'Без номера'])).entries()];
+  keys.sort(([a],[b])=>a.localeCompare(b,'ru',{numeric:true}));
+  keys.forEach(([key,label])=>sel.add(new Option(key?'Зал '+label:label,'hall:'+key)));
+  sel.value=[...sel.options].some(o=>o.value===previous)?previous:'hall:'+hallKey(halls[hallIndex]);
+}
+const isObj=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
+const record=(x,accept)=>Object.fromEntries(Object.entries(isObj(x)?x:{}).filter(([k,v])=>!['__proto__','constructor','prototype'].includes(k)&&accept(k,v)));
+const safeImage=x=>typeof x==='string'&&/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/i.test(x);
+function validateImport(data){
+  if(!isObj(data)||![2,3].includes(data.version)||!Array.isArray(data.halls)||!data.halls.length||data.halls.length>300)throw new Error('Выбери файл данных ТО или заполненный HTML этой формы.');
+  const shared=record(data.shared,(k,v)=>sharedIds.includes(k)&&typeof v==='string');
+  const imported=data.halls.map(h=>{
+    if(!isObj(h)||!isObj(h.fields))throw new Error('В файле повреждены данные проектора.');
+    const fields=record(h.fields,(k,v)=>/^[a-zA-Z0-9_-]+$/.test(k)&&(typeof v==='string'||typeof v==='boolean'));
+    const photos=Array.isArray(h.photos)?h.photos.filter(p=>isObj(p)&&safeImage(p.src)).map(p=>({src:p.src,caption:typeof p.caption==='string'?p.caption:'',category:p.category==='after'?'after':'before'})):[];
+    const swScreenshots=Array.isArray(h.swScreenshots)?h.swScreenshots.map(p=>typeof p==='string'?p:p?.src).filter(safeImage):[];
+    return {id:typeof h.id==='string'&&/^[a-z0-9-]{5,80}$/i.test(h.id)?h.id:'',
+      fields,photos,swScreenshots,workCount:Number.isInteger(h.workCount)?Math.max(0,Math.min(h.workCount,500)):0,
+      statuses:record(h.statuses,(k,v)=>typeof v==='string'),
+      customFilters:record(h.customFilters,(k,v)=>/^(?:Barco|Christie)?_(?:DP2K-(?:10S|12C|15C|20C|23B|32B))?_(?:laser|lamp)?$/.test(k)&&Number.isInteger(v)&&v>=0&&v<=150),
+      detailPhotos:record(h.detailPhotos,(k,v)=>safeImage(v)),
+      importNotes:Array.isArray(h.importNotes)?h.importNotes.filter(v=>typeof v==='string'):[]};
+  }).filter(h=>h.fields.f_hall||h.fields.f_brand||h.fields.f_projsn||h.photos.length);
+  if(!imported.length)throw new Error('В файле нет заполненных залов или проекторов.');
+  const people=Array.isArray(data.engineers)?data.engineers.filter(e=>isObj(e)&&typeof e.name==='string'&&e.name.trim()).map(e=>({name:e.name,date:typeof e.date==='string'?e.date:'',sign:typeof e.sign==='string'?e.sign:''})):[];
+  return {shared,halls:imported,engineers:people};
+}
+function downloadData(file){
+  const url=URL.createObjectURL(file), a=document.createElement('a');
+  a.href=url;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
+async function shareReport(){
+  const data=reportData();
+  const file=new File([JSON.stringify(data)],'Данные_ТО_'+(g('f_date')||localDate())+'.json',{type:'application/json'});
+  if(navigator.canShare?.({files:[file]})){
+    try{await navigator.share({files:[file],title:'Данные акта ТО'});return;}
+    catch(e){if(e.name==='AbortError')return;}
+  }
+  downloadData(file);showToast('Файл данных ТО скачан');
+}
+let pendingImport=null, importTicket=0;
+function clearImport(){
+  importTicket++;pendingImport=null;
+  document.getElementById('importFile').value='';
+  document.getElementById('importPreview').hidden=true;
+}
+async function readImport(input){
+  const file=input.files?.[0];clearImport();
+  if(!file)return;
+  const ticket=importTicket;
+  try{
+    if(file.size>150*1024*1024)throw new Error('Файл больше 150 МБ. Передай залы отдельными файлами.');
+    let raw=await file.text();
+    if(/^\s*</.test(raw)){
+      const match=raw.match(/<script\b[^>]*\bid=["']__preload__["'][^>]*>([\s\S]*?)<\/script\s*>/i);
+      if(!match)throw new Error('В этом HTML нет сохранённых данных ТО.');
+      raw=match[1];
+    }
+    const data=validateImport(JSON.parse(raw));
+    if(ticket!==importTicket)return;
+    const mismatch=['f_cinema','f_city','f_address','f_date'].some(k=>g(k)&&data.shared[k]&&normalized(g(k))!==normalized(data.shared[k]));
+    const notes=[data.shared.f_cinema,data.shared.f_city,data.shared.f_address,data.shared.f_date].filter(Boolean);
+    document.getElementById('importDescription').textContent=[
+      notes.join(' · '),...data.halls.map(projectorLabel),
+      mismatch?'Этот файл относится к другому объекту или дате. Добавление в текущий акт недоступно.':'Данные и фото текущего акта не будут перезаписаны.'
+    ].filter(Boolean).join('\n');
+    pendingImport=mismatch?null:data;
+    document.getElementById('confirmImport').disabled=mismatch;
+    document.getElementById('importPreview').hidden=false;
+  }catch(e){if(ticket===importTicket)showToast(e instanceof SyntaxError?'Файл данных ТО не удалось прочитать.':e.message);}
+}
+function mergeImport(){
+  if(!pendingImport)return;
+  storeHall();
+  const {halls:incoming,engineers:people,shared}=pendingImport;
+  const ids=new Set(halls.map(h=>h.id));
+  const imported=incoming.filter(h=>!h.id||!ids.has(h.id));
+  if(!imported.length){clearImport();showToast('Эти проекторы уже добавлены');return;}
+  const generalNotes=[shared.f_notes,shared.f_notes2].filter(v=>v?.trim());
+  imported.forEach(h=>{h.id||=newProjectorId();h.importNotes=[...new Set([...h.importNotes,...generalNotes])];});
+  const onlyEmpty=halls.length===1&&!Object.values(halls[0].fields).some(Boolean)&&!halls[0].photos.length&&!halls[0].swScreenshots.length&&!Object.keys(halls[0].detailPhotos).length&&!Object.keys(halls[0].statuses).length;
+  if(onlyEmpty){halls=imported;hallIndex=0;restoreHall();}else halls.push(...imported);
+  for(const person of people){
+    const same=engineers.find(e=>normalized(e.name)===normalized(person.name));
+    if(same){same.date||=person.date;same.sign||=person.sign;}else engineers.push(person);
+  }
+  renderEngineers();clearImport();renderReportOptions();showToast('Добавлено записей о проекторах: '+imported.length);
+}
+
 function draftStore(mode,action){
   return new Promise((resolve,reject)=>{
     const req=indexedDB.open('cto_complex_v2',1);
@@ -1201,14 +1340,14 @@ function getBadge(el){
 }
 
 function pdfPage(secNum,secTitle,content){
-  const cinema=esc(g('f_cinema')||'—'),hall=esc(g('f_hall')||'—'),date=esc(g('f_date')||'—');
+  const cinema=esc(g('f_cinema')||'—'),hall=esc(g('f_hall')||'—'),date=esc(g('f_date')||'—'), projector=esc([g('f_projmodel'),g('f_projsn')&&'с/н '+g('f_projsn')].filter(Boolean).join(' · '));
   return `<div class="pdf-page">
   <div class="pdf-top">
     <div class="pdf-top-left">
       <div class="pdf-logo">С5</div>
       <div><div class="pdf-top-title">Акт сервисного обслуживания ЦКП</div><div class="pdf-top-sub">Ежегодный сервис-план · ${cinema}</div></div>
     </div>
-    <div class="pdf-top-right"><div class="pdf-top-date">${date}</div><div class="pdf-top-hall">Зал № ${hall}</div></div>
+    <div class="pdf-top-right"><div class="pdf-top-date">${date}</div><div class="pdf-top-hall">Зал № ${hall}${projector?' · '+projector:''}</div></div>
   </div>
   <div class="pdf-content">
     <div><div class="pdf-sec-label"><div class="pdf-sec-num">${secNum}</div><div class="pdf-sec-title">${secTitle}</div></div><div class="pdf-divider"></div></div>
@@ -1315,25 +1454,93 @@ function buildHallPDFPages(){
     for(let i=0;i<total;i++)photoPages.push({title:title+(total>1?' · '+(i+1)+' / '+total:''),items:entries.slice(i*4,i*4+4)});
   }
   const included=detailSlots.flatMap(([k,label])=>detailPhotos[k]&&gc(k.startsWith('cv')?'include_cv':'include_'+k)?[{src:detailPhotos[k],caption:label}]:[]);
-  if(included.length)photoPages.push({title:'Фото замеров и конвергенции',items:included});
+  for(let i=0;i<included.length;i+=4)photoPages.push({title:'Фото замеров и конвергенции',items:included.slice(i,i+4)});
+  appendProjectorNotes(C,halls[hallIndex]);
   const offset=window._photoPages.length;window._photoPages.push(...photoPages);
   photoPages.forEach(({title,items},i)=>{
     C.innerHTML+=pdfPage(String(7+workPages+i),title,`<div data-photo-page="${offset+i}" style="flex:1;min-height:560px;background:#F8FAFB;border-radius:6px;">${items.length?items.map((ph,j)=>`<div style="position:absolute;left:${(7+(j%2)*143.5+1)/297*1122}px;top:${(33+Math.floor(j/2)*86.5+77.5+1)/210*794}px;font-size:10px;color:#64748B;max-width:510px;overflow:hidden;white-space:nowrap">${esc(ph.caption||'')}</div>`).join(''):'<div style="padding:40px;text-align:center;color:#94A3B8;font-size:13px">Фотографии не загружены</div>'}</div>`);
   });
 }
-function buildPDFPages(){
+function summaryNotes(h){
+  const result=[], f=h.fields||{}, sts=h.statuses||{};
+  const append=(label,value)=>{if(typeof value==='string'&&value.trim())result.push([label,value.trim()]);};
+  append('Неисправности',f.hall_faults);
+  append('Замены',f.hall_replacements);
+  append('Примечания',f.hall_notes);
+  (h.importNotes||[]).forEach(v=>append('Примечание из добавленного акта',v));
+  AV_PARAMS.forEach((p,i)=>{
+    const status=sts['sb_avTable_'+i], note=f['mv_avTable_'+i+'_nt'];
+    append(p.name,[status==='Норма'?'':status,note].filter(Boolean).join(' · '));
+  });
+  IMG_PARAMS.forEach((p,i)=>append(p.name,f['mv_imgTable_'+i+'_nt']));
+  AUDIO_CHANNELS.forEach(ch=>{
+    const status=sts['ach_sb_'+ch.id];
+    append(ch.name,[status==='Норма'?'':status,f['ach_'+ch.id+'_nt']].filter(Boolean).join(' · '));
+  });
+  document.querySelectorAll('[data-filter-key]').forEach(box=>{
+    if(box.dataset.filterKey!==filterKey())return;
+    box.querySelectorAll('[data-filter-id]').forEach(tr=>{
+      const id=tr.dataset.filterId;
+      if(gc(id+'_rp'))append('Заменён фильтр',tr.dataset.filterName||g(id+'_name'));
+    });
+  });
+  WORKS.forEach(([group,label],i)=>{if(workAllowed(group)&&gc('job_'+i)&&/^Замена\b|^Замена /u.test(label))append('Замена',label);});
+  for(let i=1;i<=workCount;i++)if(gc('wk_'+i))append('Работы и замены',[g('wn_'+i),g('wa_'+i),g('wc_'+i)].filter(Boolean).join(' · '));
+  return result;
+}
+function notesMarkup(items){
+  return items.map(([label,v])=>'<div class="pdf-notes-box" style="break-inside:avoid"><h4>'+esc(label)+'</h4><div class="pdf-notes-text">'+esc(v)+'</div></div>').join('');
+}
+function appendNotesPages(C,title,items){
+  const pages=[];let batch=[], used=0;
+  items.forEach(([label,text])=>{
+    const lines=text.split('\n').flatMap(line=>line.match(/.{1,125}/gu)||['']);
+    for(let start=0;start<lines.length;start+=12){
+      const chunk=lines.slice(start,start+12), cost=chunk.length+3;
+      if(batch.length&&used+cost>23){pages.push(batch);batch=[];used=0;}
+      batch.push([start?label+' (продолжение)':label,chunk.join('\n')]);used+=cost;
+    }
+  });
+  if(batch.length)pages.push(batch);
+  pages.forEach(p=>C.insertAdjacentHTML('beforeend',pdfPage('',title,notesMarkup(p))));
+}
+function appendProjectorNotes(C,h){
+  const f=h.fields||{};
+  appendNotesPages(C,'Неисправности, замены и примечания',[
+    ['Неисправности',f.hall_faults],['Замены',f.hall_replacements],['Примечания',f.hall_notes],
+    ...(h.importNotes||[]).map(n=>['Примечание из добавленного акта',n])
+  ].filter(([,v])=>v?.trim()));
+}
+function appendSummary(C,h,i){
+  const f=h.fields||{};
+  const row=(label,b,a)=>'<tr><td>'+esc(label)+'</td><td>'+esc(String(b??'').trim()||'нет данных')+'</td><td>'+esc(String(a??'').trim()||'нет данных')+'</td></tr>';
+  const table=(heading,unit,rows)=>'<div><div class="pdf-col-title">'+heading+'</div><table class="pdf-table"><thead><tr><th>Параметр</th><th>До, '+unit+'</th><th>После, '+unit+'</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  const light=IMG_PARAMS.slice(0,4).map((p,j)=>row(p.name,f['mv_imgTable_'+j+'_b'],f['mv_imgTable_'+j+'_a'])).join('');
+  const audio=AUDIO_CHANNELS.map(ch=>row(ch.name,f['ach_'+ch.id+'_b'],f['ach_'+ch.id+'_a'])).join('');
+  const notes=summaryNotes(h);
+  if(!notes.length)notes.push(['Неисправности, замены и примечания','Нет данных']);
+  const intro='<div class="pdf-two-col">'+table('Яркость','фут-ламберт',light)+table('Звук','дБ',audio)+'</div>';
+  const inline=notes.length<=4&&notes.every(([,v])=>v.length<=120&&!v.includes('\n'));
+  C.insertAdjacentHTML('beforeend',pdfPage('',projectorLabel(h,i),intro+(inline?notesMarkup(notes):'')));
+  if(!inline)appendNotesPages(C,'Сводка · неисправности, замены и примечания',notes);
+}
+
+function buildPDFPages(mode='full',selected=null){
   storeHall();
   const active=hallIndex,C=document.getElementById('pdfPages');
   C.replaceChildren();window._photoPages=[];window._swPages=[];
-  const cover=[['Кинотеатр',g('f_cinema')],['Город',g('f_city')],['Адрес',g('f_address')],['Дата ТО',g('f_date')],['Залы',halls.map((h,i)=>h.fields?.f_hall||String(i+1)).join(', ')],['Инженеры ТО',engineers.map(e=>e.name.trim()).filter(Boolean).join(', ')]];
+  const selectedHalls=halls.map((h,i)=>[h,i]).filter(([h])=>mode==='summary'||selected===null||hallKey(h)===selected);
+  const cover=[['Кинотеатр',g('f_cinema')],['Город',g('f_city')],['Адрес',g('f_address')],['Дата ТО',g('f_date')],['Залы',[...new Set(selectedHalls.map(([h,i])=>h.fields?.f_hall||String(i+1)))].join(', ')],['Инженеры ТО',engineers.map(e=>e.name.trim()).filter(Boolean).join(', ')]];
   const info=cover.map(([label,value])=>'<div class="pdf-info-cell"><div class="pdf-info-label">'+label+'</div><div class="pdf-info-value">'+esc(value||'—')+'</div></div>').join('');
-  const first=pdfPage('1','Карточка ТО','<div class="pdf-info-grid">'+info+'</div>');
+  const first=pdfPage('1',mode==='summary'?'Сводный отчёт по всем залам':'Карточка ТО','<div class="pdf-info-grid">'+info+'</div>');
   C.insertAdjacentHTML('beforeend',first);
   const stripHall=page=>{page.querySelector('.pdf-top-hall').remove();page.querySelector('.pdf-footer-left').textContent=['Акт ТО ЦКП',g('f_cinema'),g('f_date')].filter(Boolean).join(' · ');};
   stripHall(C.lastElementChild);
   try{
-    halls.forEach((h,i)=>{
+    selectedHalls.sort(([a,ai],[b,bi])=>hallKey(a).localeCompare(hallKey(b),'ru',{numeric:true})||ai-bi);
+    selectedHalls.forEach(([h,i])=>{
       hallIndex=i;restoreHall();
+      if(mode==='summary'){appendSummary(C,h,i);return;}
       const start=C.childElementCount;
       buildHallPDFPages();
       const page=C.children[start+1];
@@ -1347,7 +1554,7 @@ function buildPDFPages(){
   const notes=[['Примечания и рекомендации',g('f_notes')],['Дополнительная информация',g('f_notes2')]].map(([label,value])=>'<div class="pdf-notes-box"><h4>'+label+'</h4><div class="pdf-notes-text">'+esc(value||'—')+'</div></div>').join('');
   C.insertAdjacentHTML('beforeend',pdfPage('','Примечания и рекомендации','<div class="pdf-notes-layout">'+notes+'</div>'));
   stripHall(C.lastElementChild);
-  for(let i=0;i<parties.length;i+=9){
+  for(let i=0;mode==='full'&&i<parties.length;i+=9){
     const cards=parties.slice(i,i+9).map(([t,n,d,s])=>`<div class="pdf-sig-card"><h5>${t}</h5><div class="pdf-sig-row"><strong>ФИО:</strong>${esc(n||'—')}</div><div class="pdf-sig-row"><strong>Дата:</strong>${esc(d||'—')}</div><div class="pdf-sig-row"><strong>Подпись:</strong>${esc(s||'_________________')}</div></div>`).join('');
     C.insertAdjacentHTML('beforeend',pdfPage('','Подписи сторон','<div class="pdf-sig-grid">'+cards+'</div>'));
     stripHall(C.lastElementChild);
@@ -1359,13 +1566,15 @@ function buildPDFPages(){
 // ═══════════════════════════════════════════════════════════
 //  EXPORT PDF
 // ═══════════════════════════════════════════════════════════
-async function exportPDF(){
+async function exportPDF(mode='full'){
   if(!window.jspdf||typeof window.html2canvas!=='function'){showToast('Для загрузки модуля PDF откройте форму с интернетом и обновите страницу');return;}
-  saveDraft();
+  storeHall();
+  const value=document.getElementById('fullHall').value;
+  const selected=mode==='full'&&value.startsWith('hall:')?value.slice(5):null;
   // Validation: warn if key fields empty
   const missing=[];
   if(!g('f_date')) missing.push('Дата ТО');
-  halls.forEach((h,i)=>{if(!h.fields?.f_hall?.trim())missing.push('Номер зала '+(i+1));});
+  halls.forEach((h,i)=>{if((selected===null||hallKey(h)===selected)&&!h.fields?.f_hall?.trim())missing.push('Номер зала '+(i+1));});
   if(!g('f_city')) missing.push('Город');
   if(!g('f_cinema')) missing.push('Кинотеатр');
   if(missing.length&&!confirm(`Не заполнены поля: ${missing.join(', ')}.\nПродолжить экспорт?`)) return;
@@ -1373,7 +1582,7 @@ async function exportPDF(){
   overlay.classList.add('show');
   await new Promise(r=>setTimeout(r,60));
   try{
-    buildPDFPages();
+    buildPDFPages(mode,selected);
     await new Promise(r=>setTimeout(r,500));
 
     const {jsPDF}=window.jspdf;
@@ -1453,7 +1662,8 @@ async function exportPDF(){
     }
     pdf.setTextColor(0,0,0);
     const cinema=g('f_cinema')||'Кинотеатр',hall=g('f_hall')||'0',date=g('f_date')||new Date().toISOString().slice(0,10);
-    pdf.save(`АктТО_${cinema}_${halls.length===1?'зал'+hall:halls.length+'-залов'}_${date}.pdf`);
+    const chosen=halls.find(h=>hallKey(h)===selected)?.fields?.f_hall;
+    pdf.save(`АктТО_${cinema}_${mode==='summary'?'сводный':chosen?'зал'+chosen:selected!==null?'зал-без-номера':'полный-все-залы'}_${date}.pdf`.replace(/[<>:"/\\|?*]/g,'_'));
     showToast('✓ PDF сохранён');
   }catch(e){console.error(e);alert('Ошибка PDF: '+e.message);}
   document.getElementById('pdfPages').innerHTML='';
@@ -1496,6 +1706,8 @@ async function saveAsHTML(){
   const preloadTag=`<script type="application/json" id="__preload__">${JSON.stringify(preload).replace(/</g,"\\u003c")}<\/script>`;
   const copy=document.documentElement.cloneNode(true);
   copy.querySelector('#__preload__')?.remove();
+  copy.querySelector('#importPreview').hidden=true;
+  copy.querySelector('#importDescription').textContent='';
   ['#pdfPages','#photoGallery','#swGallery','#measurementPhotos','#workChecks','#filtersWrap','#worksTbody','#engineerList','#engineerSignatures'].forEach(sel=>copy.querySelector(sel)?.replaceChildren());
   copy.querySelector('#batchCamera')?.removeAttribute('open');
   copy.querySelector('#pdfOverlay')?.classList.remove('show');
@@ -1509,7 +1721,7 @@ async function saveAsHTML(){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url; a.download=filename; a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
   showToast('✓ HTML: '+filename);
 }
 
