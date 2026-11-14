@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-report-version="2">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -14,7 +14,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 [hidden]{display:none!important}
-.wizard-status{pointer-events:none}
+.wizard-status{pointer-events:auto}
 #workChecks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 12px;margin-bottom:16px}
 #workChecks label,.extra-photo label{display:flex;align-items:center;gap:8px;padding:6px}
 #workChecks input,.filters-grid input[type=checkbox]{width:20px;height:20px;flex-shrink:0}
@@ -330,6 +330,19 @@ body{font-family:var(--font);background:#E8EEF4;color:var(--text);min-height:100
 /* note inputs inside meas/audio tables */
 .param-note-inp{border:none;background:transparent;font-size:11px;width:100%;padding:2px 4px;font-family:var(--font);color:var(--text2)}
 .param-note-inp:focus{outline:none;background:#F0FBFC;border-radius:4px}
+
+.module-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0}
+#stepsNav{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+#stepsNav select{pointer-events:auto;min-width:0;max-width:100%;min-height:44px;border:1px solid #7FA8B8;border-radius:7px;padding:6px 8px;background:#fff;color:#0F1C2E;font:inherit}
+#engineerList .field,#engineerSignatures .sig-card{min-width:0}
+#engineerSignatures{margin-bottom:8px}
+#batchCamera{max-width:min(600px,calc(100% - 24px));width:100%;max-height:calc(100dvh - 16px);margin:auto;overflow:auto;border:0;border-radius:12px;padding:12px;background:#fff;color:#0F1C2E}
+#batchCamera::backdrop{background:#0F1C2ECC}
+#cameraVideo{display:block;width:100%;max-height:52dvh;background:#0F1C2E;object-fit:contain;margin-top:8px;border-radius:8px}
+.pdf-sig-row,.pdf-info-value,.pdf-notes-text{overflow-wrap:anywhere}
+@media(max-width:600px){.topbar-left>div:last-child{min-width:0}.topbar h1{white-space:normal}.filters-grid td:first-child{overflow-wrap:anywhere}}
+@media (pointer:coarse){input:not([type=checkbox]):not([type=file]),select,textarea{font-size:16px!important}.btn{min-height:44px}.photo-action-btn{min-width:36px;min-height:36px}.filters-grid td input[type=checkbox]{width:20px;height:20px}}
+@media (max-height:500px) and (orientation:landscape){.topbar{position:relative}}
 </style>
 </head>
 <body>
@@ -358,17 +371,20 @@ body{font-family:var(--font);background:#E8EEF4;color:var(--text);min-height:100
 <div class="main">
 
 <!-- ════ 1. ОБЩИЕ СВЕДЕНИЯ ════ -->
-<div class="section-card active" id="sec0">
-  <div class="sec-header"><div class="sec-badge">1</div><div class="sec-title">Общие сведения об объекте и оборудовании</div></div>
-  <div class="sec-body">
+<div class="section-card active" id="welcome">
+  <div class="sec-header"><div class="sec-badge">1</div><div class="sec-title">Карточка ТО</div></div>
+  <div class="sec-body"><div class="fg fg-4"><div class="field"><label>Дата ТО</label><input type="date" id="f_date"/></div><div class="field"><label>Город</label><input type="text" id="f_city" placeholder="Санкт-Петербург"/></div><div class="field"><label>Кинотеатр</label><input type="text" id="f_cinema" placeholder="Название"/></div>
+  <div class="field"><label for="f_address">Адрес</label><input id="f_address" type="text" placeholder="Улица, дом"></div>
+  </div><div class="subsec-title">Инженеры ТО</div><div id="engineerList" class="fg fg-3"></div>
+  <button type="button" class="btn btn-ghost" onclick="addEngineer()">+ Добавить инженера</button></div>
+  <div class="nav-btns"><div class="step-info"></div><button class="btn btn-primary" onclick="goStep(1)">Далее →</button></div>
+</div>
+<div class="section-card" id="sec0">
+  <div class="sec-header"><div class="sec-badge">2</div><div class="sec-title">Общие сведения об оборудовании</div></div>
+  <div class="sec-body"><div class="module-actions"><button class="btn btn-primary" onclick="addHall()">+ Добавить зал</button><button class="btn btn-ghost" id="removeHallButton" onclick="removeHall()">Удалить текущий зал</button></div>
+  <div class="fg fg-4"><div class="field"><label>Зал №</label><input type="text" id="f_hall" placeholder="5"/></div></div>
     <div class="fg fg-4">
-      <div class="field"><label>Дата ТО</label><input type="date" id="f_date"/></div>
-      <div class="field"><label>Зал №</label><input type="text" id="f_hall" placeholder="5"/></div>
-      <div class="field"><label>Город</label><input type="text" id="f_city" placeholder="Санкт-Петербург"/></div>
-      <div class="field"><label>Кинотеатр</label><input type="text" id="f_cinema" placeholder="Название"/></div>
-    </div>
-    <div class="fg fg-4">
-      <div class="field"><label for="f_light">Источник света</label><select id="f_light" onchange="syncProfile()"><option value="">Выберите</option><option value="lamp">Лампа</option><option value="laser">Лазер</option></select></div>
+      <div class="field"><label for="f_light">Источник света</label><select id="f_light" onchange="syncProfile()"><option value="">Выберите</option><option value="lamp">Лампа</option><option value="laser">Лазерный блок</option></select></div>
       <div class="field"><label for="f_brand">Производитель</label><select id="f_brand" onchange="syncProfile()"><option value="">Выберите</option><option>Barco</option><option>Christie</option></select></div>
       <div class="field" id="modelField" hidden><label for="f_model">Модель Barco</label><select id="f_model" onchange="syncProfile()"><option value="">Выберите</option><option>DP2K-10S</option><option>DP2K-12C</option><option>DP2K-15C</option><option>DP2K-23B</option><option>DP2K-20C</option><option>DP2K-32B</option></select></div>
       <input type="hidden" id="f_projmodel"/>
@@ -392,13 +408,9 @@ body{font-family:var(--font);background:#E8EEF4;color:var(--text);min-height:100
     <div class="fg fg-4">
       <div class="field"><label>Модель аудиопроцессора</label><input type="text" id="f_audio" placeholder="Dolby CP950 / QSC…"/></div>
       <div class="field"><label>С/н аудиопроцессора</label><input type="text" id="f_audiosn"/></div>
-      <div class="field"><label>Инженер ТО (ФИО)</label><input type="text" id="f_engineer"/></div>
-      <div class="field"><label>Адрес / Контакт</label><input type="text" id="f_address" placeholder="ул. Ленина 10, тел. +7…"/></div>
     </div>
-  </div>
-  <div class="nav-btns"><div class="step-info">Шаг 1 / 7</div><button class="btn btn-primary" onclick="goStep(1)">Далее →</button></div>
+  </div><div class="nav-btns"><button class="btn btn-ghost" onclick="goStep(0)">← Назад</button><div class="step-info"></div><button class="btn btn-primary" onclick="goStep(2)">Далее →</button></div>
 </div>
-
 <!-- ════ 2. ПО ════ -->
 <div class="section-card" id="sec1">
   <div class="sec-header"><div class="sec-badge">2</div><div class="sec-title">Программное обеспечение и конфигурация</div></div>
@@ -436,27 +448,13 @@ body{font-family:var(--font);background:#E8EEF4;color:var(--text);min-height:100
     </div>
   </div>
   <div class="nav-btns">
-    <button class="btn btn-ghost" onclick="goStep(0)">← Назад</button>
-    <div class="step-info">Шаг 2 / 7</div>
-    <button class="btn btn-primary" onclick="goStep(2)">Далее →</button>
-  </div>
-</div>
-
-<!-- ════ 3. ОЧИСТКА ════ -->
-<div class="section-card" id="sec2">
-  <div class="sec-header"><div class="sec-badge">3</div><div class="sec-title">Очистка и проверка компонентов проектора</div></div>
-  <div class="sec-body">
-    <div class="col-2" id="compTablesWrap"></div>
-
-  </div>
-  <div class="nav-btns">
     <button class="btn btn-ghost" onclick="goStep(1)">← Назад</button>
-    <div class="step-info">Шаг 3 / 7</div>
+    <div class="step-info"></div>
     <button class="btn btn-primary" onclick="goStep(3)">Далее →</button>
   </div>
 </div>
 
-<!-- ════ 4. ПАРАМЕТРЫ ════ -->
+<!-- ════ 3. ОЧИСТКА ════ -->
 <div class="section-card" id="sec3">
   <div class="sec-header"><div class="sec-badge">4</div><div class="sec-title">Звук, вентиляция и параметры изображения</div></div>
   <div class="sec-body">
@@ -487,7 +485,8 @@ body{font-family:var(--font);background:#E8EEF4;color:var(--text);min-height:100
 <div class="section-card" id="sec4">
   <div class="sec-header"><div class="sec-badge">5</div><div class="sec-title">Выполненные работы и замены деталей</div></div>
   <div class="sec-body">
-    <div id="workChecks"></div>
+    <div class="module-actions"><button class="btn btn-primary" onclick="toggleWorks(true)">Выполнено всё</button><button class="btn btn-ghost" onclick="toggleWorks(false)">Не выполнено всё</button></div>
+    <div class="photo-hint">Статусы фильтров выбираются по факту отдельно.</div><div id="workChecks"></div>
     <div id="filtersWrap" style="margin-bottom:16px"></div>
     <table class="works-table">
       <thead><tr>
@@ -519,7 +518,7 @@ body{font-family:var(--font);background:#E8EEF4;color:var(--text);min-height:100
       <button class="btn btn-primary" onclick="document.getElementById('photoFileInput').click()">
         📎 Добавить фото
       </button>
-      <button class="btn btn-primary" onclick="document.getElementById('photoCamera').click()">📷 Камера</button>
+      <button class="btn btn-primary" onclick="openBatchCamera()">📷 Камера</button>
       <input type="file" id="photoCamera" accept="image/*" capture="environment" hidden onchange="addPhotosFromFiles(this.files);this.value=''"/>
       <input type="file" id="photoFileInput" accept="image/*" multiple style="display:none" onchange="addPhotosFromFiles(this.files);this.value=''"/>
       <span class="photo-hint" id="photoCountHint">Фото не добавлено</span>
@@ -541,13 +540,9 @@ body{font-family:var(--font);background:#E8EEF4;color:var(--text);min-height:100
       <div class="field"><label>Примечания и рекомендации</label><textarea id="f_notes" rows="5" placeholder="Замечания, рекомендации по следующему ТО…"></textarea></div>
       <div class="field"><label>Дополнительная информация</label><textarea id="f_notes2" rows="5" placeholder="Любая доп. информация…"></textarea></div>
     </div>
+    <div id="engineerSignatures" class="sig-grid"></div>
+    <button class="btn btn-ghost" onclick="addEngineer()">+ Добавить инженера</button>
     <div class="sig-grid">
-      <div class="sig-card">
-        <h4>Инженер по обслуживанию</h4>
-        <div class="field"><label>ФИО</label><input type="text" id="sig1_name"/></div>
-        <div class="field"><label>Дата</label><input type="date" id="sig1_date"/></div>
-        <div class="field"><label>Подпись / инициалы</label><input type="text" id="sig1_sign" placeholder="—"/></div>
-      </div>
       <div class="sig-card">
         <h4>Системный администратор</h4>
         <div class="field"><label>ФИО</label><input type="text" id="sig2_name"/></div>
@@ -570,6 +565,10 @@ body{font-family:var(--font);background:#E8EEF4;color:var(--text);min-height:100
 </div>
 </div><!-- /main -->
 
+<dialog id="batchCamera" aria-labelledby="cameraTitle">
+<div class="sec-title" id="cameraTitle">Камера</div><video id="cameraVideo" autoplay muted playsinline></video>
+<div class="module-actions"><button id="takePhoto" class="btn btn-primary" onclick="takeBatchPhoto()" disabled>Снять фото</button><button class="btn btn-ghost" onclick="useNativeCamera()">Камера iPhone</button><button class="btn btn-ghost" onclick="closeBatchCamera()">Готово</button></div>
+<div id="cameraCount" role="status"></div></dialog>
 <div id="pdfPages"></div>
 <div class="pdf-overlay" id="pdfOverlay"><div class="pdf-box"><div class="spinner"></div><strong>Формируется PDF…</strong><p>Рендеринг страниц отчёта</p></div></div>
 <div class="toast" id="toast"></div>
@@ -599,7 +598,6 @@ const WORKS=[
  ...[['красного','R'],['зелёного','G'],['синего','B']].flatMap(([c,k])=>['Поднятие','Очистка защитного стекла','Установка'].map(a=>['dmd',a+' '+c+' DMD-чипа ('+k+')'])),
  ['common','Монтаж светового блока («матрицы»)'],['common','Проверка уровня охлаждающей жидкости'],['common','Замена охлаждающей жидкости'],['common','Проверка герметичности контура охлаждения'],['common','Проверка изображения на белом и чёрном полях'],['common','Проверка фокуса'],['common','Проверка конвергенции по тестовой сетке'],['common','Регулировка конвергенции'],['common','Замер яркости до ТО'],['common','Замер яркости после ТО'],['common','Проверка журнала ошибок после сборки']
 ];
-const lampComponent=c=>/ламп|холодное зеркало/i.test(c);
 function workAllowed(group){
   if(group==='dmd')return !(g('f_brand')==='Barco'&&g('f_model')==='DP2K-32B');
   return group==='common'||group===g('f_light');
@@ -609,14 +607,13 @@ function modelFilters(){
   return [...barco,...(g('f_light')==='laser'?LASER_FILTERS:[])];
 }
 const filterKey=()=>[g('f_brand'),g('f_model'),g('f_light')].map((v,i)=>i===1&&g('f_brand')!=='Barco'?'':v).join('_');
-const customFilters={};
+let customFilters={};
 function syncProfile(){
   const brand=g('f_brand'), model=g('f_model'), light=g('f_light');
   document.getElementById('modelField').hidden=brand!=='Barco';
   document.getElementById('lampField').hidden=light!=='lamp';
   document.getElementById('f_projmodel').value=brand==='Barco'?[brand,model].filter(Boolean).join(' '):brand;
   document.querySelectorAll('[data-work-group]').forEach(el=>el.hidden=!workAllowed(el.dataset.workGroup));
-  document.querySelectorAll('[data-lamp-component]').forEach(el=>el.hidden=light!=='lamp');
   document.querySelectorAll('[data-filter-key]').forEach(el=>el.hidden=el.dataset.filterKey!==filterKey());
   if(![...document.querySelectorAll('[data-filter-key]')].some(el=>el.dataset.filterKey===filterKey()))buildFiltersTable();
 }
@@ -653,12 +650,21 @@ const SW_LABELS=['ПО проектора актуально','ПО плей с�
 //  NAVIGATION
 // ═══════════════════════════════════════════════════════════
 let currentStep=0;
-const stepCards=['sec0','sec1','sec2','sec3','sec4','sec5','sec5','sec6'];
-const stepLabels=['Сведения','ПО','Очистка','Параметры','Работы','Фото до ТО','Фото после ТО','Подписи'];
+const stepCards=['welcome','sec0','sec1','sec3','sec4','sec5','sec5','sec6'];
+const stepLabels=['Карточка ТО','Оборудование','ПО','Параметры','Работы','Фото до ТО','Фото после ТО','Подписи'];
+let unlocked=false, hallIndex=0, halls=[{}], engineers=[{name:'',date:'',sign:''}];
+const sharedIds=['f_date','f_city','f_cinema','f_address','f_notes','f_notes2','sig2_name','sig2_date','sig2_sign','sig3_name','sig3_date','sig3_sign'];
+const hallSections='#sec0,#sec1,#sec3,#sec4';
 function goStep(n){
-  if(n<0||n>=stepCards.length||Math.abs(n-currentStep)>1)return;
-  if(n===1&&currentStep===0&&!(g('f_light')&&g('f_brand')&&(g('f_brand')!=='Barco'||g('f_model')))){
-    showToast('Выберите источник света и проектор');return;
+  if(!Number.isInteger(n)||n<0||n>=stepCards.length)return;
+  if(n>0&&!unlocked){
+    const missing=[['f_date','дату'],['f_city','город'],['f_cinema','кинотеатр'],['f_address','адрес']].find(([id])=>!g(id).trim());
+    if(missing){showToast('Укажите '+missing[1]);document.getElementById(missing[0]).focus();return;}
+    if(!engineers.some(e=>e.name.trim())){showToast('Укажите инженера ТО');document.querySelector('#engineerList input').focus();return;}
+    unlocked=true;
+  }
+  if(n>=2&&n<=6&&!(g('f_light')&&g('f_brand')&&(g('f_brand')!=='Barco'||g('f_model')))){
+    showToast('Для текущего зала выберите источник света и проектор');n=1;
   }
   currentStep=n;
   const active=document.getElementById(stepCards[n]);
@@ -666,31 +672,72 @@ function goStep(n){
   active.querySelector('.sec-badge').textContent=n+1;
   active.querySelector('.step-info').textContent='Шаг '+(n+1)+' / '+stepCards.length;
   document.getElementById('topExport').hidden=n!==7;
-  document.getElementById('stepsNav').innerHTML='<span class="step-btn active">'+(n+1)+'. '+stepLabels[n]+'</span>';
+  renderNavigation();
   document.getElementById('progressFill').style.width=((n+1)/stepCards.length*100)+'%';
   if(n===5||n===6){document.getElementById('photoTitle').textContent=stepLabels[n];renderGallery();}
-  window.scrollTo({top:0,behavior:'smooth'});
+  if(n===7)renderEngineers();
+  window.scrollTo({top:0,behavior:'instant'});
+}
+function renderNavigation(){
+  const nav=document.getElementById('stepsNav');
+  nav.replaceChildren();
+  const step=document.createElement(unlocked?'select':'span');
+  if(unlocked){
+    step.setAttribute('aria-label','Перейти к разделу');
+    stepLabels.forEach((title,i)=>step.add(new Option((i+1)+'. '+title,i,false,i===currentStep)));
+    step.onchange=()=>goStep(Number(step.value));
+  }else{step.className='step-btn active';step.textContent='1. Карточка ТО';}
+  nav.append(step);
+  if(currentStep>0&&currentStep<7){
+    const sel=document.createElement('select');
+    sel.setAttribute('aria-label','Выбрать зал');
+    halls.forEach((h,i)=>{const name=(i===hallIndex?g('f_hall'):h.fields?.f_hall)?.trim();sel.add(new Option(name?'Зал '+name:'Зал '+(i+1)+' (без номера)',i,false,i===hallIndex));});
+    sel.onchange=()=>switchHall(Number(sel.value));
+    nav.append(sel);
+  }
+  document.getElementById('removeHallButton').hidden=halls.length===1;
+}
+function addEngineer(){
+  engineers.push({name:'',date:'',sign:''});renderEngineers();
+  document.querySelector(currentStep===7?'#engineerSignatures .sig-card:last-child input':'#engineerList .field:last-child input')?.focus();
+}
+function renderEngineers(){
+  const first=document.getElementById('engineerList'), last=document.getElementById('engineerSignatures');
+  first.replaceChildren();last.replaceChildren();
+  engineers.forEach((engineer,i)=>{
+    function field(key,title,type='text'){
+      const wrap=document.createElement('label');wrap.className='field';
+      const label=document.createElement('span');label.textContent=title;
+      const input=document.createElement('input');input.type=type;input.value=engineer[key];
+      input.oninput=()=>{engineer[key]=input.value;
+        if(key==='name'){const other=(currentStep===7?first:last).querySelectorAll('[data-engineer-name]')[i];if(other&&other!==input)other.value=input.value;}
+      };
+      if(key==='name')input.dataset.engineerName='';
+      wrap.append(label,input);return wrap;
+    }
+    const name=field('name','Инженер ТО '+(i+1)+' · ФИО');
+    if(engineers.length>1){
+      const remove=document.createElement('button');remove.type='button';remove.className='btn btn-ghost btn-sm';remove.textContent='Удалить инженера';
+      remove.onclick=e=>{e.preventDefault();engineers.splice(i,1);renderEngineers();};name.append(remove);
+    }
+    first.append(name);
+    const card=document.createElement('div');card.className='sig-card';
+    const title=document.createElement('h4');title.textContent='Инженер по обслуживанию '+(i+1);
+    card.append(title,field('name','ФИО'),field('date','Дата','date'),field('sign','Подпись / инициалы'));
+    last.append(card);
+  });
+}
+function toggleWorks(mark){
+  document.querySelectorAll(mark?'#workChecks label:not([hidden]) input':'#workChecks input').forEach(e=>e.checked=mark);
+  document.querySelectorAll('#worksTbody tr').forEach(tr=>{
+    const checked=tr.querySelector('input[type=checkbox]'), name=tr.querySelector('input[type=text]');
+    checked.checked=mark&&!!name.value.trim();
+  });
+  if(!mark)document.querySelectorAll('#filtersWrap input[type=checkbox]').forEach(e=>e.checked=false);
 }
 // ═══════════════════════════════════════════════════════════
 //  COMPONENTS
 // ═══════════════════════════════════════════════════════════
-function buildCompTables(){
-  const wrap=document.getElementById('compTablesWrap');
-  COMPONENTS.forEach((cols,gi)=>{
-    const d=document.createElement('div');
-    const t=document.createElement('table'); t.className='comp-table';
-    t.innerHTML='<thead><tr><th>Компонент / узел</th><th>В норме</th><th>Очищено</th><th>Замена</th><th>Примечание</th></tr></thead>';
-    const tb=document.createElement('tbody');
-    cols.forEach((c,ri)=>{
-      const id=`c_${gi}_${ri}`;
-      const tr=document.createElement('tr');
-      if(lampComponent(c))tr.dataset.lampComponent="";
-      tr.innerHTML=`<td>${c}</td><td><input type="checkbox" id="${id}_ok"/></td><td><input type="checkbox" id="${id}_cl"/></td><td><input type="checkbox" id="${id}_rp"/></td><td><input type="text" id="${id}_nt" placeholder="…"/></td>`;
-      tb.appendChild(tr);
-    });
-    t.appendChild(tb); d.appendChild(t); wrap.appendChild(d);
-  });
-}
 function buildFiltersTable(){
   const wrap=document.getElementById('filtersWrap');
   const key=filterKey(), box=document.createElement('div');
@@ -791,23 +838,14 @@ function addWorkRow(){
 // ═══════════════════════════════════════════════════════════
 let swScreenshots=[];
 
-function addSwScreenshots(files){
-  const arr=Array.from(files).filter(f=>f.type.startsWith('image/'));
-  let loaded=0;
-  arr.forEach(f=>{
-    const r=new FileReader(); r.onload=e=>{
-      swScreenshots.push(e.target.result);
-      loaded++;
-      if(loaded===arr.length) renderSwGallery();
-    }; r.readAsDataURL(f);
-  });
+async function addSwScreenshots(files){
+  const target=swScreenshots;
+  const results=await Promise.allSettled(Array.from(files).map(imageData));
+  results.forEach(r=>{if(r.status==='fulfilled')target.push(r.value);});
+  if(swScreenshots===target)renderSwGallery();
+  if(results.some(r=>r.status==='rejected'))showToast('Не удалось добавить часть изображений');
 }
-function addSwScreenshotFromBlob(blob){
-  const r=new FileReader(); r.onload=e=>{
-    swScreenshots.push(e.target.result);
-    renderSwGallery();
-  }; r.readAsDataURL(blob);
-}
+function addSwScreenshotFromBlob(blob){return addSwScreenshots([blob]);}
 function removeSwScreenshot(i){
   swScreenshots.splice(i,1);
   renderSwGallery();
@@ -854,25 +892,69 @@ let photos=[];
 let dragSrcIdx=null;
 
 function photoCategory(){return currentStep===6?'after':'before';}
-function addPhotosFromFiles(files){
-  const category=photoCategory();
-  const arr=Array.from(files).filter(f=>f.type.startsWith('image/'));
-  let loaded=0;
-  arr.forEach(f=>{
-    const r=new FileReader(); r.onload=e=>{
-      photos.push({src:e.target.result,caption:'',category});
-      loaded++;
-      if(loaded===arr.length) renderGallery();
-    }; r.readAsDataURL(f);
-  });
+function captureTarget(){
+  return {photos,swScreenshots,detailPhotos,category:photoCategory()};
 }
-function addPhotoFromBlob(blob){
-  const category=photoCategory();
-  const r=new FileReader(); r.onload=e=>{
-    photos.push({src:e.target.result,caption:'',category});
-    renderGallery();
-  }; r.readAsDataURL(blob);
+async function imageData(file){
+  if(!file?.type?.startsWith('image/'))throw new Error('Выберите изображение');
+  const raw=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);});
+  const im=await new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(new Error('Не удалось открыть фото. Попробуйте JPEG или PNG.'));im.src=raw;});
+  if(file.type==='image/png'&&Math.max(im.naturalWidth,im.naturalHeight)<=1600)return raw;
+  const c=document.createElement('canvas'), ratio=Math.min(1,1600/Math.max(im.naturalWidth,im.naturalHeight));
+  c.width=Math.round(im.naturalWidth*ratio);c.height=Math.round(im.naturalHeight*ratio);
+  const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(im,0,0,c.width,c.height);
+  return c.toDataURL('image/jpeg',.88);
 }
+async function addPhotosFromFiles(files){
+  const target=captureTarget();
+  const results=await Promise.allSettled(Array.from(files).map(imageData));
+  results.forEach(r=>{if(r.status==='fulfilled')target.photos.push({src:r.value,caption:'',category:target.category});});
+  if(photos===target.photos)renderGallery();
+  const failed=results.filter(r=>r.status==='rejected').length;
+  if(failed)showToast('Не удалось добавить фото: '+failed+'. Попробуйте JPEG или PNG.');
+}
+function addPhotoFromBlob(blob){return addPhotosFromFiles([blob]);}
+let cameraStream=null,cameraSession=null,cameraShots=0;
+async function openBatchCamera(){
+  const dialog=document.getElementById('batchCamera');
+  if(!navigator.mediaDevices?.getUserMedia||!dialog.showModal){document.getElementById('photoCamera').click();return;}
+  if(dialog.open)return;
+  const session=cameraSession=captureTarget();
+  cameraShots=0;
+  document.getElementById('cameraCount').textContent='Подключение камеры…';
+  dialog.showModal();
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1600}},audio:false});
+    if(cameraSession!==session||!dialog.open){stream.getTracks().forEach(t=>t.stop());return;}
+    cameraStream=stream;
+    const video=document.getElementById('cameraVideo');
+    video.srcObject=stream;await video.play();
+    if(cameraSession!==session)return;
+    document.getElementById('takePhoto').disabled=false;
+    document.getElementById('cameraCount').textContent='Можно сделать несколько снимков подряд';
+  }catch{
+    if(cameraSession===session)document.getElementById('cameraCount').textContent='Нет доступа к камере в браузере. Нажмите «Камера iPhone» или выберите снимки из галереи.';
+  }
+}
+function takeBatchPhoto(){
+  const video=document.getElementById('cameraVideo');
+  if(!cameraSession||!video.videoWidth)return;
+  const c=document.createElement('canvas'), ratio=Math.min(1,1600/Math.max(video.videoWidth,video.videoHeight));
+  c.width=Math.round(video.videoWidth*ratio);c.height=Math.round(video.videoHeight*ratio);
+  c.getContext('2d').drawImage(video,0,0,c.width,c.height);
+  cameraSession.photos.push({src:c.toDataURL('image/jpeg',.88),caption:'',category:cameraSession.category});
+  renderGallery();
+  document.getElementById('cameraCount').textContent='Снимков за эту серию: '+(++cameraShots);
+}
+function stopBatchCamera(){
+  cameraSession=null;
+  cameraStream?.getTracks().forEach(t=>t.stop());cameraStream=null;
+  document.getElementById('cameraVideo').srcObject=null;document.getElementById('takePhoto').disabled=true;
+}
+function closeBatchCamera(){stopBatchCamera();document.getElementById('batchCamera').close();}
+function useNativeCamera(){closeBatchCamera();document.getElementById('photoCamera').click();}
+document.getElementById('batchCamera').addEventListener('cancel',stopBatchCamera);
+window.addEventListener('pagehide',stopBatchCamera);
 function removePhoto(i){
   photos.splice(i,1);
   renderGallery();
@@ -902,7 +984,7 @@ function renderGallery(){
           <option value="before" ${ph.category!=='after'?'selected':''}>До ТО</option>
           <option value="after" ${ph.category==='after'?'selected':''}>После ТО</option>
         </select>
-        <input class="photo-caption" value="${ph.caption.replace(/"/g,'&quot;')}" placeholder="Подпись к фото…" oninput="updateCaption(${i},this.value)"/>
+        <input class="photo-caption" value="${esc(ph.caption||'')}" placeholder="Подпись к фото…" oninput="updateCaption(${i},this.value)"/>
       </div>`;
     // drag events
     card.addEventListener('dragstart',e=>{dragSrcIdx=i;card.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
@@ -955,8 +1037,9 @@ document.addEventListener('paste',e=>{
       const blob=item.getAsFile();
       if(blob){
         // if on SW section → screenshot; else → photo
-        if(currentStep===1) addSwScreenshotFromBlob(blob);
-        else addPhotoFromBlob(blob);
+        if(currentStep===2) addSwScreenshotFromBlob(blob);
+        else if(currentStep===5||currentStep===6) addPhotoFromBlob(blob);
+        else continue;
         showToast('✓ Изображение вставлено');
       }
     }
@@ -966,25 +1049,13 @@ document.addEventListener('paste',e=>{
 // ═══════════════════════════════════════════════════════════
 //  DRAFT
 // ═══════════════════════════════════════════════════════════
-const FIELD_IDS=['f_light','f_brand','f_model','f_date','f_hall','f_city','f_cinema','f_projmodel','f_projsn','f_hours','f_lamp','f_lens','f_lenssn','f_3d','f_3dsn','f_srvmodel','f_srvsn','f_icp','f_icpsn','f_audio','f_audiosn','f_engineer','f_address','sw_ver','f_notes','f_notes2','sig1_name','sig1_date','sig1_sign','sig2_name','sig2_date','sig2_sign','sig3_name','sig3_date','sig3_sign',
-  // audio channels
-  'ach_L_b','ach_L_a','ach_C_b','ach_C_a','ach_R_b','ach_R_a','ach_Ls_b','ach_Ls_a','ach_Rs_b','ach_Rs_a','ach_Lss_b','ach_Lss_a','ach_Rss_b','ach_Rss_a','ach_Sub_b','ach_Sub_a',
-  // measurement notes (avTable)
-  'mv_avTable_0_nt','mv_avTable_1_nt','mv_avTable_2_nt','mv_avTable_3_nt',
-  // imgTable before/after + notes
-  'mv_imgTable_0_b','mv_imgTable_0_a','mv_imgTable_1_b','mv_imgTable_1_a',
-  'mv_imgTable_2_b','mv_imgTable_2_a','mv_imgTable_3_b','mv_imgTable_3_a',
-  'mv_imgTable_4_b','mv_imgTable_4_a','mv_imgTable_5_b','mv_imgTable_5_a',
-  'mv_imgTable_6_b','mv_imgTable_6_a','mv_imgTable_7_b','mv_imgTable_7_a','mv_imgTable_8_b','mv_imgTable_8_a',
-  'mv_imgTable_0_nt','mv_imgTable_1_nt','mv_imgTable_2_nt','mv_imgTable_3_nt','mv_imgTable_4_nt','mv_imgTable_5_nt','mv_imgTable_6_nt','mv_imgTable_7_nt','mv_imgTable_8_nt',
-  // audio channel notes
-  'ach_L_nt','ach_C_nt','ach_R_nt','ach_Ls_nt','ach_Rs_nt','ach_Lss_nt','ach_Rss_nt','ach_Sub_nt',
-];
-const detailPhotos={};
+let detailPhotos={};
 const detailSlots=[['fl_before','Яркость до ТО'],['fl_after','Яркость после ТО'],['cv_before','Конвергенция до ТО'],['cv_after','Конвергенция после ТО']];
-function readDetailPhoto(input,key){
+async function readDetailPhoto(input,key){
   const file=input.files[0];if(!file)return;
-  const r=new FileReader();r.onload=()=>{detailPhotos[key]=r.result;renderDetailPhotos();};r.readAsDataURL(file);
+  const target=detailPhotos;
+  try{target[key]=await imageData(file);if(target===detailPhotos)renderDetailPhotos();}
+  catch(e){showToast(e.message);}
 }
 function renderDetailPhotos(){
   detailSlots.forEach(([key])=>{
@@ -1005,69 +1076,110 @@ function buildDetailPhotos(){
     '<div id="preview_'+key+'"></div>'+(i<2?'<label><input id="include_'+key+'" type="checkbox"> Включить фото в PDF</label>':'')+'</div>').join('')+
     '<label class="extra-photo"><input type="checkbox" id="include_cv"> Включить раздел «Конвергенция» в PDF</label>';
 }
-function saveChecklist(d){
-  d.__customFilters=customFilters;
-  d.__detailPhotos=detailPhotos;
-  document.querySelectorAll('#workChecks input,#filtersWrap input,#measurementPhotos input[type=checkbox],#worksTbody input[type=checkbox],#compTablesWrap input').forEach(e=>d[e.id]=e.type==='checkbox'?e.checked:e.value);
+function storeHall(){
+  const fields={};
+  document.querySelectorAll(hallSections).forEach(section=>section.querySelectorAll('input[id],select[id],textarea[id]').forEach(el=>{
+    if(el.type!=='file')fields[el.id]=el.type==='checkbox'?el.checked:el.value;
+  }));
+  const statuses={};
+  document.querySelectorAll('.status-btns[id]').forEach(el=>{
+    const selected=el.querySelector('.sel-ok,.sel-warn,.sel-err');
+    if(selected)statuses[el.id]=selected.textContent.trim();
+  });
+  halls[hallIndex]={fields,statuses,workCount,customFilters,detailPhotos,photos,swScreenshots};
 }
-function saveDraft(){
-  const d={};
-  FIELD_IDS.forEach(id=>{const el=document.getElementById(id);if(el)d[id]=el.value;});
-  for(let i=1;i<=8;i++) d[`sw${i}`]=document.getElementById(`sw${i}`)?.checked||false;
-  saveChecklist(d);
-  // status buttons
-  const sbData={};
-  AV_PARAMS.forEach((_,i)=>{const el=document.getElementById(`sb_avTable_${i}`);if(el){const s=el.querySelector('.sel-ok,.sel-warn,.sel-err');if(s)sbData[`sb_avTable_${i}`]=s.textContent.trim();}});
-  IMG_PARAMS.forEach((_,i)=>{const el=document.getElementById(`sb_imgTable_${i}`);if(el){const s=el.querySelector('.sel-ok,.sel-warn,.sel-err');if(s)sbData[`sb_imgTable_${i}`]=s.textContent.trim();}});
-  AUDIO_CHANNELS.forEach(ch=>{const el=document.getElementById(`ach_sb_${ch.id}`);if(el){const s=el.querySelector('.sel-ok,.sel-warn,.sel-err');if(s)sbData[`ach_sb_${ch.id}`]=s.textContent.trim();}});
-  d.__sb=sbData;
-  // work rows
-  d.__wc=workCount;
-  for(let i=1;i<=workCount;i++){d[`wn_${i}`]=document.getElementById(`wn_${i}`)?.value||'';d[`wa_${i}`]=document.getElementById(`wa_${i}`)?.value||'';d[`wc_${i}`]=document.getElementById(`wc_${i}`)?.value||'';}
-  try{
-    const photosToSave=photos;
-    localStorage.setItem('cto_v5',JSON.stringify(d));
-    localStorage.setItem('cto_v5_photos',JSON.stringify(photosToSave));
-    try{localStorage.setItem('cto_v5_swshots',JSON.stringify(swScreenshots));}catch(e3){}
-    showToast('✓ Черновик сохранён');
-  }catch(e){
-    try{delete d.__detailPhotos;localStorage.setItem('cto_v5',JSON.stringify(d));showToast('✓ Черновик сохранён (без фото)');}catch(e2){showToast('Ошибка сохранения');}
+function restoreHall(){
+  const h=halls[hallIndex], fields=h.fields||{};
+  photos=h.photos||[];swScreenshots=h.swScreenshots||[];detailPhotos=h.detailPhotos||{};customFilters=h.customFilters||{};
+  // Keep each hall's image arrays attached while asynchronous reads finish.
+  h.photos=photos;h.swScreenshots=swScreenshots;h.detailPhotos=detailPhotos;h.customFilters=customFilters;
+  document.getElementById('worksTbody').replaceChildren();workCount=0;
+  for(let i=0;i<Math.max(1,h.workCount||0);i++)addWorkRow();
+  document.getElementById('filtersWrap').replaceChildren();
+  document.querySelectorAll(hallSections).forEach(section=>section.querySelectorAll('input[id],select[id],textarea[id]').forEach(el=>{
+    if(el.type==='checkbox')el.checked=!!fields[el.id];
+    else if(el.type!=='file')el.value=fields[el.id]??'';
+  }));
+  const profile=['f_brand','f_model','f_light'];
+  for(const key of Object.keys(customFilters)){
+    if(key===filterKey())continue;
+    const selected=profile.map(g);
+    key.split('_').forEach((value,i)=>document.getElementById(profile[i]).value=value);
+    buildFiltersTable();
+    selected.forEach((value,i)=>document.getElementById(profile[i]).value=value);
   }
-}
-function loadDraft(){
-  try{
-    const raw=localStorage.getItem('cto_v5'); if(!raw) return;
-    const d=JSON.parse(raw);
-    // Restore extra work rows before generic value loop
-    if(typeof d.__wc==='number'&&d.__wc>workCount)
-      for(let i=workCount+1;i<=d.__wc;i++) addWorkRow();
-    ['f_light','f_brand','f_model'].forEach(id=>{if(d[id])document.getElementById(id).value=d[id];});
-    if(!d.f_brand&&d.f_projmodel){
-      const model=Object.keys(BARCO_FILTERS).find(m=>d.f_projmodel.toUpperCase().includes(m));
-      if(model){document.getElementById('f_brand').value='Barco';document.getElementById('f_model').value=model;}
-      else if(/christie/i.test(d.f_projmodel))document.getElementById('f_brand').value='Christie';
-    }
-    Object.assign(customFilters,d.__customFilters||{});
-    document.getElementById('filtersWrap').innerHTML='';
-    syncProfile();
-    const selected=[g('f_brand'),g('f_model'),g('f_light')];
-    Object.keys(customFilters).filter(k=>k!==filterKey()).forEach(key=>{
-      const [brand,model,light]=key.split('_');
-      ['f_brand','f_model','f_light'].forEach((id,i)=>document.getElementById(id).value=[brand,model,light][i]);
-      buildFiltersTable();
+  syncProfile();
+  document.querySelectorAll('#filtersWrap input').forEach(el=>{
+    if(el.type==='checkbox')el.checked=!!fields[el.id];else el.value=fields[el.id]??'';
+  });
+  document.querySelectorAll('.status-btns[id]').forEach(el=>{
+    el.querySelectorAll('.status-btn').forEach(btn=>{
+      btn.classList.remove('sel-ok','sel-warn','sel-err');
+      if(btn.textContent.trim()===h.statuses?.[el.id])selStatus(btn,btn.textContent.trim());
     });
-    ['f_brand','f_model','f_light'].forEach((id,i)=>document.getElementById(id).value=selected[i]);
-    Object.assign(detailPhotos,d.__detailPhotos||{});
-    renderDetailPhotos();
-    Object.entries(d).forEach(([id,v])=>{const el=document.getElementById(id);if(!el)return;if(typeof v==='boolean')el.checked=v;else if(typeof v==='string')el.value=v;});
-    syncProfile();
-    const rawPhotos=localStorage.getItem('cto_v5_photos');
-    if(rawPhotos){photos=JSON.parse(rawPhotos);renderGallery();}
-    const rawSW=localStorage.getItem('cto_v5_swshots');
-    if(rawSW){swScreenshots=JSON.parse(rawSW);renderSwGallery();}
-  }catch(e){}
+  });
+  renderDetailPhotos();renderGallery();renderSwGallery();
 }
-function resetForm(){if(!confirm('Очистить все данные?'))return;localStorage.removeItem('cto_v5');localStorage.removeItem('cto_v5_photos');localStorage.removeItem('cto_v5_swshots');location.reload();}
+function switchHall(i){
+  if(!halls[i]||i===hallIndex)return;
+  storeHall();hallIndex=i;restoreHall();goStep(currentStep);
+}
+function addHall(){
+  storeHall();halls.push({});hallIndex=halls.length-1;restoreHall();goStep(1);document.getElementById('f_hall').focus();
+}
+function removeHall(){
+  if(halls.length<=1||!confirm('Удалить текущий зал вместе с его данными?'))return;
+  halls.splice(hallIndex,1);hallIndex=Math.min(hallIndex,halls.length-1);restoreHall();goStep(1);
+}
+function reportData(){
+  storeHall();
+  return {version:2,halls,hallIndex,engineers,unlocked,shared:Object.fromEntries(sharedIds.map(id=>[id,g(id)]))};
+}
+function legacyReport(pd){
+  const fields=pd.fields||{}, first=fields.f_engineer||fields.sig1_name||'';
+  return {version:2,shared:fields,engineers:[{name:first,date:fields.sig1_date||'',sign:fields.sig1_sign||''}],
+    halls:[{fields,photos:pd.photos,swScreenshots:pd.swshots,detailPhotos:fields.__detailPhotos,customFilters:fields.__customFilters,workCount:fields.__wc,statuses:fields.__sb}]};
+}
+function applyReport(data){
+  if(data.version!==2)data=legacyReport(data);
+  if(data.halls?.length)halls=data.halls;
+  hallIndex=halls[data.hallIndex]?data.hallIndex:0;
+  if(data.engineers?.length)engineers=data.engineers;
+  sharedIds.forEach(id=>{if(typeof data.shared?.[id]==='string')document.getElementById(id).value=data.shared[id];});
+  unlocked=!!data.unlocked;
+  renderEngineers();restoreHall();
+}
+function draftStore(mode,action){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open('cto_complex_v2',1);
+    req.onupgradeneeded=()=>req.result.createObjectStore('drafts');
+    req.onerror=()=>reject(req.error);
+    req.onsuccess=()=>{
+      const db=req.result, tx=db.transaction('drafts',mode), op=action(tx.objectStore('drafts'));
+      tx.oncomplete=()=>{db.close();resolve(op.result);};
+      tx.onerror=tx.onabort=()=>{db.close();reject(tx.error);};
+    };
+  });
+}
+async function saveDraft(){
+  try{
+    const data=reportData();await draftStore('readwrite',store=>store.put(data,'current'));
+    showToast('Черновик сохранён');
+  }catch{showToast('Не удалось сохранить черновик. Скачайте заполненный HTML.');}
+}
+async function resetForm(){
+  if(!confirm('Очистить весь акт и все залы?'))return;
+  try{
+    await draftStore('readwrite',store=>store.delete('current'));
+    ['cto_v5','cto_v5_photos','cto_v5_swshots'].forEach(k=>localStorage.removeItem(k));
+    if(document.getElementById('__preload__')){
+      applyReport({version:2,halls:[{}],engineers:[{name:'',date:'',sign:''}],shared:Object.fromEntries(sharedIds.map(id=>[id,id==='f_date'?localDate():'']))});goStep(0);
+    }else location.reload();
+  }catch{showToast('Не удалось удалить черновик');}
+}
+function localDate(){
+  const d=new Date();return new Date(d-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+}
 function showToast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg;t.style.opacity='1';
@@ -1079,7 +1191,7 @@ function showToast(msg){
 // ═══════════════════════════════════════════════════════════
 function g(id){return(document.getElementById(id)||{}).value||'';}
 function gc(id){return document.getElementById(id)?.checked||false;}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function getBadge(el){
   if(!el) return '<span class="pdf-badge badge-na">—</span>';
   const sel=el.querySelector('.sel-ok,.sel-warn,.sel-err');
@@ -1106,40 +1218,22 @@ function pdfPage(secNum,secTitle,content){
 </div>`;
 }
 
-function buildPDFPages(){
-  const C=document.getElementById('pdfPages'); C.innerHTML='';
+function buildHallPDFPages(){
+  const C=document.getElementById('pdfPages');
 
-  // PAGE 1
-  const heroBlock=`<div class="pdf-cover-hero">
-    <div class="pdf-cover-hero-item">
-      <div class="pdf-cover-hero-label">Кинотеатр</div>
-      <div class="pdf-cover-hero-value md">${esc(g('f_cinema')||'—')}</div>
-    </div>
-    <div class="pdf-cover-hero-item">
-      <div class="pdf-cover-hero-label">Зал №</div>
-      <div class="pdf-cover-hero-value teal">${esc(g('f_hall')||'—')}</div>
-    </div>
-    <div class="pdf-cover-hero-item">
-      <div class="pdf-cover-hero-label">Город</div>
-      <div class="pdf-cover-hero-value md">${esc(g('f_city')||'—')}</div>
-    </div>
-    <div class="pdf-cover-hero-item">
-      <div class="pdf-cover-hero-label">Дата ТО</div>
-      <div class="pdf-cover-hero-value md accent">${esc(g('f_date')||'—')}</div>
-    </div>
-  </div>`;
+  // Equipment page for the current hall
   const metrics=`<div class="pdf-metrics">
     <div class="pdf-metric"><div class="pdf-metric-label">Часов наработки</div><div class="pdf-metric-value">${esc(g('f_hours')||'—')}</div><div class="pdf-metric-sub">проектора</div></div>
     ${g('f_light')==='lamp'?'<div class="pdf-metric"><div class="pdf-metric-label">Лампа / наработка</div><div class="pdf-metric-value" style="font-size:14px">'+esc(g('f_lamp')||'—')+'</div></div>':''}
     <div class="pdf-metric"><div class="pdf-metric-label">Модель ЦКП</div><div class="pdf-metric-value" style="font-size:14px">${esc(g('f_projmodel')||'—')}</div></div>
-    <div class="pdf-metric"><div class="pdf-metric-label">Инженер ТО</div><div class="pdf-metric-value" style="font-size:13px">${esc(g('f_engineer')||'—')}</div></div>
+    <div class="pdf-metric"><div class="pdf-metric-label">Зал №</div><div class="pdf-metric-value" style="font-size:13px">${esc(g('f_hall')||'—')}</div></div>
   </div>`;
   const infoCells=[
     ['С/н ЦКП',g('f_projsn')],['Объектив',g('f_lens')],['С/н объектива',g('f_lenssn')],['3D система',g('f_3d')],
     ['С/н 3D',g('f_3dsn')],['Модель сервера',g('f_srvmodel')],['С/н сервера',g('f_srvsn')],['Модель ICP',g('f_icp')],
-    ['С/н ICP',g('f_icpsn')],['Аудиопроцессор',g('f_audio')],['С/н аудиопроц.',g('f_audiosn')],['Адрес / Контакт',g('f_address')],
+    ['С/н ICP',g('f_icpsn')],['Аудиопроцессор',g('f_audio')],['С/н аудиопроц.',g('f_audiosn')],
   ].map(([l,v])=>`<div class="pdf-info-cell"><div class="pdf-info-label">${l}</div><div class="pdf-info-value">${esc(v||'—')}</div></div>`).join('');
-  C.innerHTML+=pdfPage('1','Общие сведения об объекте и оборудовании',heroBlock+metrics+`<div class="pdf-info-grid" style="grid-template-columns:repeat(4,1fr)">${infoCells}</div>`);
+  C.innerHTML+=pdfPage('1','Общие сведения об оборудовании',metrics+`<div class="pdf-info-grid" style="grid-template-columns:repeat(4,1fr)">${infoCells}</div>`);
 
   // PAGE 2 — SW
   let swImgContent;
@@ -1164,25 +1258,6 @@ function buildPDFPages(){
     <div><div class="pdf-col-title">Скриншоты версий ПО${swScreenshots.length?' ('+swScreenshots.length+')':''}</div><div class="pdf-sw-img" style="display:block;padding:0;min-height:${swScreenshots.length?0:80}px">${swImgContent}</div></div>
     <div class="pdf-sw-checks"><h4>Статус конфигурации</h4>${swRows}${swVer?`<div style="margin-top:10px;padding-top:8px;border-top:1px solid #B8DEE3"><span style="font-size:9px;font-weight:700;color:#007A8A;text-transform:uppercase">Версии / примечание</span><div style="font-size:12px;font-weight:700;margin-top:3px">${esc(swVer)}</div></div>`:''}</div>
   </div>`);
-
-  // PAGE 3 — Components + Filters
-  const compHalf=gi=>{
-    const rows=COMPONENTS[gi].map((comp,ri)=>{
-      if(g('f_light')!=='lamp'&&lampComponent(comp))return '';
-      const id=`c_${gi}_${ri}`;
-      const ok=document.getElementById(`${id}_ok`)?.checked;
-      const cl=document.getElementById(`${id}_cl`)?.checked;
-      const rp=document.getElementById(`${id}_rp`)?.checked;
-      const nt=document.getElementById(`${id}_nt`)?.value||'';
-      return `<tr><td>${esc(comp)}</td>
-        <td style="text-align:center">${ok?'<span style="color:#10B981">✓</span>':'<span style="color:#CBD5E1">○</span>'}</td>
-        <td style="text-align:center">${cl?'<span style="color:#10B981">✓</span>':'<span style="color:#CBD5E1">○</span>'}</td>
-        <td style="text-align:center">${rp?'<span style="color:#EF4444;font-weight:700">!</span>':'<span style="color:#CBD5E1">○</span>'}</td>
-        <td style="font-size:10px;color:#475569">${esc(nt)}</td></tr>`;
-    }).join('');
-    return `<table class="pdf-table"><thead><tr><th>Компонент / узел</th><th>В норме</th><th>Очищено</th><th>Замена</th><th>Примечание</th></tr></thead><tbody>${rows}</tbody></table>`;
-  };
-  C.innerHTML+=pdfPage('3','Очистка и проверка компонентов проектора',`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${compHalf(0)}${compHalf(1)}</div>`);
 
   // PAGE 4 — Audio channels
   const audioChRows=AUDIO_CHANNELS.map(ch=>{
@@ -1232,25 +1307,6 @@ function buildPDFPages(){
     C.innerHTML+=pdfPage(String(6+p),'Выполненные работы и замены деталей',`<table class="pdf-table"><thead><tr><th style="width:28px">№</th><th>Наименование работы / детали</th><th style="width:180px">Артикул / С/н</th><th>Результат / Примечание</th></tr></thead><tbody>${wRows}</tbody></table>`);
   }
 
-  // PAGE 7 — Notes + Sigs
-  const notes=esc(g('f_notes')||'—'),notes2=esc(g('f_notes2')||'');
-  const sigCards=[['Инженер по обслуживанию','sig1_name','sig1_date','sig1_sign'],['Системный администратор','sig2_name','sig2_date','sig2_sign'],['Представитель руководства','sig3_name','sig3_date','sig3_sign']]
-    .map(([t,n,d,s])=>`<div class="pdf-sig-card"><h5>${t}</h5><div class="pdf-sig-row"><strong>ФИО:</strong>${esc(g(n)||'—')}</div><div class="pdf-sig-row"><strong>Дата:</strong>${esc(g(d)||'—')}</div><div class="pdf-sig-row"><strong>Подпись:</strong>${esc(g(s)||'_________________')}</div></div>`).join('');
-  C.innerHTML+=pdfPage(String(6+workPages),'Примечания, рекомендации и подписи сторон',`<div class="pdf-notes-layout">
-    <div>
-      <div class="pdf-notes-box"><h4>Примечания и рекомендации</h4><div class="pdf-notes-text">${notes}</div></div>
-      ${notes2?`<div class="pdf-notes-box" style="margin-top:8px"><h4>Доп. информация</h4><div class="pdf-notes-text">${notes2}</div></div>`:''}
-    </div>
-    <div>
-      <div class="pdf-col-title" style="margin-bottom:9px">Подписи сторон</div>
-      <div class="pdf-sig-grid">${sigCards}</div>
-      <div style="margin-top:12px;background:linear-gradient(135deg,#0F1C2E,#1A2E45);border-radius:9px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
-        <div style="color:#8BBEC8;font-size:9.5px">Акт составлен · ${esc(g('f_cinema')||'—')} · Зал ${esc(g('f_hall')||'—')}</div>
-        <div style="color:#F59E0B;font-size:12px;font-weight:700">${esc(g('f_date')||'—')}</div>
-      </div>
-    </div>
-  </div>`);
-
   // PHOTO SHELL PAGES — actual photos are overlaid in exportPDF() at native resolution
   const photoPages=[];
   for(const [cat,title] of [['before','Фото до ТО'],['after','Фото после ТО']]){
@@ -1260,12 +1316,44 @@ function buildPDFPages(){
   }
   const included=detailSlots.flatMap(([k,label])=>detailPhotos[k]&&gc(k.startsWith('cv')?'include_cv':'include_'+k)?[{src:detailPhotos[k],caption:label}]:[]);
   if(included.length)photoPages.push({title:'Фото замеров и конвергенции',items:included});
-  window._photoPages=photoPages;
+  const offset=window._photoPages.length;window._photoPages.push(...photoPages);
   photoPages.forEach(({title,items},i)=>{
-    C.innerHTML+=pdfPage(String(7+workPages+i),title,`<div data-photo-page="${i}" style="flex:1;min-height:560px;background:#F8FAFB;border-radius:6px;">${items.length?items.map((ph,j)=>`<div style="position:absolute;left:${(7+(j%2)*143.5+1)/297*1122}px;top:${(33+Math.floor(j/2)*86.5+77.5+1)/210*794}px;font-size:10px;color:#64748B;max-width:510px;overflow:hidden;white-space:nowrap">${esc(ph.caption||'')}</div>`).join(''):'<div style="padding:40px;text-align:center;color:#94A3B8;font-size:13px">Фотографии не загружены</div>'}</div>`);
+    C.innerHTML+=pdfPage(String(7+workPages+i),title,`<div data-photo-page="${offset+i}" style="flex:1;min-height:560px;background:#F8FAFB;border-radius:6px;">${items.length?items.map((ph,j)=>`<div style="position:absolute;left:${(7+(j%2)*143.5+1)/297*1122}px;top:${(33+Math.floor(j/2)*86.5+77.5+1)/210*794}px;font-size:10px;color:#64748B;max-width:510px;overflow:hidden;white-space:nowrap">${esc(ph.caption||'')}</div>`).join(''):'<div style="padding:40px;text-align:center;color:#94A3B8;font-size:13px">Фотографии не загружены</div>'}</div>`);
   });
+}
+function buildPDFPages(){
+  storeHall();
+  const active=hallIndex,C=document.getElementById('pdfPages');
+  C.replaceChildren();window._photoPages=[];window._swPages=[];
+  const cover=[['Кинотеатр',g('f_cinema')],['Город',g('f_city')],['Адрес',g('f_address')],['Дата ТО',g('f_date')],['Залы',halls.map((h,i)=>h.fields?.f_hall||String(i+1)).join(', ')],['Инженеры ТО',engineers.map(e=>e.name.trim()).filter(Boolean).join(', ')]];
+  const info=cover.map(([label,value])=>'<div class="pdf-info-cell"><div class="pdf-info-label">'+label+'</div><div class="pdf-info-value">'+esc(value||'—')+'</div></div>').join('');
+  const first=pdfPage('1','Карточка ТО','<div class="pdf-info-grid">'+info+'</div>');
+  C.insertAdjacentHTML('beforeend',first);
+  const stripHall=page=>{page.querySelector('.pdf-top-hall').remove();page.querySelector('.pdf-footer-left').textContent=['Акт ТО ЦКП',g('f_cinema'),g('f_date')].filter(Boolean).join(' · ');};
+  stripHall(C.lastElementChild);
+  try{
+    halls.forEach((h,i)=>{
+      hallIndex=i;restoreHall();
+      const start=C.childElementCount;
+      buildHallPDFPages();
+      const page=C.children[start+1];
+      page.dataset.swGroup=window._swPages.push(swScreenshots)-1;
+    });
+  }finally{
+    hallIndex=active;restoreHall();
+  }
+  const parties=[...engineers.filter(e=>e.name.trim()).map(e=>['Инженер по обслуживанию',e.name,e.date||g('f_date'),e.sign]),
+    ...[['Системный администратор','sig2'],['Представитель руководства','sig3']].map(([title,id])=>[title,g(id+'_name'),g(id+'_date'),g(id+'_sign')])];
+  const notes=[['Примечания и рекомендации',g('f_notes')],['Дополнительная информация',g('f_notes2')]].map(([label,value])=>'<div class="pdf-notes-box"><h4>'+label+'</h4><div class="pdf-notes-text">'+esc(value||'—')+'</div></div>').join('');
+  C.insertAdjacentHTML('beforeend',pdfPage('','Примечания и рекомендации','<div class="pdf-notes-layout">'+notes+'</div>'));
+  stripHall(C.lastElementChild);
+  for(let i=0;i<parties.length;i+=9){
+    const cards=parties.slice(i,i+9).map(([t,n,d,s])=>`<div class="pdf-sig-card"><h5>${t}</h5><div class="pdf-sig-row"><strong>ФИО:</strong>${esc(n||'—')}</div><div class="pdf-sig-row"><strong>Дата:</strong>${esc(d||'—')}</div><div class="pdf-sig-row"><strong>Подпись:</strong>${esc(s||'_________________')}</div></div>`).join('');
+    C.insertAdjacentHTML('beforeend',pdfPage('','Подписи сторон','<div class="pdf-sig-grid">'+cards+'</div>'));
+    stripHall(C.lastElementChild);
+  }
   const total=C.querySelectorAll('.pdf-page').length;
-  C.querySelectorAll('.pdf-footer-right').forEach((el,i)=>el.textContent='Страница '+(i+1)+' / '+total);
+  C.querySelectorAll('.pdf-page').forEach((page,i)=>{page.querySelector('.pdf-sec-num').textContent=i+1;page.querySelector('.pdf-footer-right').textContent='Страница '+(i+1)+' / '+total;});
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1277,7 +1365,7 @@ async function exportPDF(){
   // Validation: warn if key fields empty
   const missing=[];
   if(!g('f_date')) missing.push('Дата ТО');
-  if(!g('f_hall')) missing.push('Зал №');
+  halls.forEach((h,i)=>{if(!h.fields?.f_hall?.trim())missing.push('Номер зала '+(i+1));});
   if(!g('f_city')) missing.push('Город');
   if(!g('f_cinema')) missing.push('Кинотеатр');
   if(missing.length&&!confirm(`Не заполнены поля: ${missing.join(', ')}.\nПродолжить экспорт?`)) return;
@@ -1310,18 +1398,20 @@ async function exportPDF(){
     const PX_MMX=297/1122, PX_MMY=210/794;
 
     for(let i=0;i<pages.length;i++){
-      const canvas=await html2canvas(pages[i],{scale:2.5,useCORS:true,allowTaint:true,backgroundColor:'#ffffff',width:1122,height:794,windowWidth:1122,windowHeight:794});
+      const canvas=await html2canvas(pages[i],{scale:1.65,useCORS:true,allowTaint:true,backgroundColor:'#ffffff',width:1122,height:794,windowWidth:1122,windowHeight:794});
       const shellData=canvas.toDataURL('image/jpeg',0.93);
       if(i>0) pdf.addPage();
       pdf.addImage(shellData,'JPEG',0,0,297,210);
 
+      canvas.width=canvas.height=1;
       // PAGE 2 — overlay SW screenshots at native resolution
-      if(i===1&&swScreenshots.length>0){
+      const pageScreenshots=window._swPages[pages[i].dataset.swGroup]||[];
+      if(pageScreenshots.length){
         const pageRect=pages[i].getBoundingClientRect();
         const swImgEls=pages[i].querySelectorAll('[data-sw-img]');
         for(const el of swImgEls){
           const idx=parseInt(el.getAttribute('data-sw-img'));
-          const sw=swScreenshots[idx]; if(!sw) continue;
+          const sw=pageScreenshots[idx]; if(!sw) continue;
           const src=typeof sw==='string'?sw:sw.src; if(!src) continue;
           const r=el.getBoundingClientRect();
           const xmm=(r.left-pageRect.left)*PX_MMX;
@@ -1333,8 +1423,8 @@ async function exportPDF(){
           const dims=await getImgDims(src);
           const lb=letterbox(dims.w,dims.h,wmm,hmm);
           const fmt=src.startsWith('data:image/png')?'PNG':'JPEG';
-          try{pdf.addImage(src,fmt,xmm+lb.dx,ymm+lb.dy,lb.fw,lb.fh,'sw_'+idx,'NONE');}
-          catch(e){try{pdf.addImage(src,'JPEG',xmm+lb.dx,ymm+lb.dy,lb.fw,lb.fh,'sw_'+idx+'j','NONE');}catch(e2){}}
+          try{pdf.addImage(src,fmt,xmm+lb.dx,ymm+lb.dy,lb.fw,lb.fh,'sw_'+i+'_'+idx,'NONE');}
+          catch(e){try{pdf.addImage(src,'JPEG',xmm+lb.dx,ymm+lb.dy,lb.fw,lb.fh,'sw_'+i+'_'+idx+'j','NONE');}catch(e2){}}
         }
       }
 
@@ -1363,7 +1453,7 @@ async function exportPDF(){
     }
     pdf.setTextColor(0,0,0);
     const cinema=g('f_cinema')||'Кинотеатр',hall=g('f_hall')||'0',date=g('f_date')||new Date().toISOString().slice(0,10);
-    pdf.save(`АктТО_${cinema}_зал${hall}_${date}.pdf`);
+    pdf.save(`АктТО_${cinema}_${halls.length===1?'зал'+hall:halls.length+'-залов'}_${date}.pdf`);
     showToast('✓ PDF сохранён');
   }catch(e){console.error(e);alert('Ошибка PDF: '+e.message);}
   document.getElementById('pdfPages').innerHTML='';
@@ -1373,24 +1463,8 @@ async function exportPDF(){
 // ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
-function init(){
-  // Load preload data if present (from a saved HTML file)
-  const preloadEl=document.getElementById('__preload__');
-  if(preloadEl){
-    try{
-      const pd=JSON.parse(preloadEl.textContent);
-      if(pd.fields) localStorage.setItem('cto_v5',JSON.stringify(pd.fields));
-      if(pd.photos) localStorage.setItem('cto_v5_photos',JSON.stringify(pd.photos));
-      if(pd.swshots) localStorage.setItem('cto_v5_swshots',JSON.stringify(pd.swshots));
-    }catch(e){}
-  }
-  // Clear dynamic containers (safe for serialized-DOM re-open)
-  document.getElementById('pdfPages').innerHTML='';
-  document.getElementById('compTablesWrap').innerHTML='';
-  document.getElementById('filtersWrap').innerHTML='';
-  document.getElementById('worksTbody').innerHTML='';
-  workCount=0;
-  buildCompTables();
+async function init(){
+  document.getElementById('pdfPages').replaceChildren();
   document.getElementById('workChecks').innerHTML=WORKS.map(([group,label],i)=>'<label data-work-group="'+group+'"><input type="checkbox" id="job_'+i+'">'+esc(label)+'</label>').join('');
   buildAvTable();
   buildImgTable();
@@ -1401,48 +1475,24 @@ function init(){
     const headers=[...table.querySelectorAll('thead th')].map(th=>th.textContent);
     table.querySelectorAll('tbody tr').forEach(row=>[...row.cells].forEach((td,i)=>{if(i&&!td.dataset.mobileLabel)td.dataset.mobileLabel=headers[i]||'';}));
   });
-  renderGallery();
-  renderSwGallery();
-  document.getElementById('f_date').value=new Date().toISOString().slice(0,10);
-  document.getElementById('sig1_date').value=new Date().toISOString().slice(0,10);
-  loadDraft();
-  syncProfile();
-  goStep(0);
-  // Restore status buttons after loadDraft
+  document.getElementById('f_date').value=localDate();
+  renderEngineers();restoreHall();goStep(0);
+  document.getElementById('f_hall').addEventListener('change',renderNavigation);
   try{
-    const raw=localStorage.getItem('cto_v5');
-    if(raw){
-      const d=JSON.parse(raw);
-      if(d.__sb){
-        Object.entries(d.__sb).forEach(([sbId,val])=>{
-          const sbEl=document.getElementById(sbId);
-          if(!sbEl) return;
-          sbEl.querySelectorAll('.status-btn').forEach(btn=>{
-            if(btn.textContent.trim()===val) selStatus(btn,val);
-          });
-        });
+    const preload=document.getElementById('__preload__');
+    let data=preload?JSON.parse(preload.textContent):null;
+    if(!data){
+      try{data=await draftStore('readonly',store=>store.get('current'));}catch{}
+      if(!data){
+        const fields=JSON.parse(localStorage.getItem('cto_v5')||'null');
+        if(fields)data=legacyReport({fields,photos:JSON.parse(localStorage.getItem('cto_v5_photos')||'[]'),swshots:JSON.parse(localStorage.getItem('cto_v5_swshots')||'[]')});
       }
     }
-  }catch(e){}
+    if(data){applyReport(data);goStep(0);}
+  }catch(e){console.warn(e);showToast('Не удалось загрузить сохранённый черновик');}
 }
-
 async function saveAsHTML(){
-  showToast('⏳ Сохранение HTML…');
-  await new Promise(r=>setTimeout(r,60));
-  const d={};
-  FIELD_IDS.forEach(id=>{const el=document.getElementById(id);if(el)d[id]=el.value;});
-  for(let i=1;i<=8;i++) d[`sw${i}`]=document.getElementById(`sw${i}`)?.checked||false;
-  saveChecklist(d);
-  const sbData={};
-  AV_PARAMS.forEach((_,i)=>{const el=document.getElementById(`sb_avTable_${i}`);if(el){const s=el.querySelector('.sel-ok,.sel-warn,.sel-err');if(s)sbData[`sb_avTable_${i}`]=s.textContent.trim();}});
-  IMG_PARAMS.forEach((_,i)=>{const el=document.getElementById(`sb_imgTable_${i}`);if(el){const s=el.querySelector('.sel-ok,.sel-warn,.sel-err');if(s)sbData[`sb_imgTable_${i}`]=s.textContent.trim();}});
-  AUDIO_CHANNELS.forEach(ch=>{const el=document.getElementById(`ach_sb_${ch.id}`);if(el){const s=el.querySelector('.sel-ok,.sel-warn,.sel-err');if(s)sbData[`ach_sb_${ch.id}`]=s.textContent.trim();}});
-  d.__sb=sbData;
-  d.__wc=workCount;
-  for(let i=1;i<=workCount;i++){d[`wn_${i}`]=document.getElementById(`wn_${i}`)?.value||'';d[`wa_${i}`]=document.getElementById(`wa_${i}`)?.value||'';d[`wc_${i}`]=document.getElementById(`wc_${i}`)?.value||'';}
-  const photosData=photos;
-  const swData=[...swScreenshots];
-  const preload={fields:d,photos:photosData,swshots:swData};
+  const preload=reportData();
   const preloadTag=`<script type="application/json" id="__preload__">${JSON.stringify(preload).replace(/</g,"\\u003c")}<\/script>`;
   let sourceHtml="<!DOCTYPE html>\n"+document.documentElement.outerHTML;
   sourceHtml=sourceHtml.replace(/<script type="application\/json" id="__preload__">[\s\S]*?<\/script>\s*/,'');
@@ -1450,7 +1500,7 @@ async function saveAsHTML(){
   const cinema=(g('f_cinema')||'КТ').replace(/[<>:"/\\|?*]/g,'').trim().substring(0,20);
   const hall=g('f_hall')||'0';
   const date=(g('f_date')||new Date().toISOString().slice(0,10)).replace(/-/g,'.');
-  const filename=`АктТО_${cinema}_з${hall}_${date}.html`;
+  const filename=`АктТО_${cinema}_${halls.length===1?'з'+hall:halls.length+'-залов'}_${date}.html`;
   const blob=new Blob([sourceHtml],{type:'text/html;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
