@@ -1494,9 +1494,13 @@ async function init(){
 async function saveAsHTML(){
   const preload=reportData();
   const preloadTag=`<script type="application/json" id="__preload__">${JSON.stringify(preload).replace(/</g,"\\u003c")}<\/script>`;
-  let sourceHtml="<!DOCTYPE html>\n"+document.documentElement.outerHTML;
-  sourceHtml=sourceHtml.replace(/<script type="application\/json" id="__preload__">[\s\S]*?<\/script>\s*/,'');
-  sourceHtml=sourceHtml.replace('<\/head>',()=>preloadTag+'\n<\/head>');
+  const copy=document.documentElement.cloneNode(true);
+  copy.querySelector('#__preload__')?.remove();
+  ['#pdfPages','#photoGallery','#swGallery','#measurementPhotos','#workChecks','#filtersWrap','#worksTbody','#engineerList','#engineerSignatures'].forEach(sel=>copy.querySelector(sel)?.replaceChildren());
+  copy.querySelector('#batchCamera')?.removeAttribute('open');
+  copy.querySelector('#pdfOverlay')?.classList.remove('show');
+  let sourceHtml="<!DOCTYPE html>\n"+copy.outerHTML;
+  sourceHtml=sourceHtml.replace('</head>',()=>preloadTag+'\n</head>');
   const cinema=(g('f_cinema')||'КТ').replace(/[<>:"/\\|?*]/g,'').trim().substring(0,20);
   const hall=g('f_hall')||'0';
   const date=(g('f_date')||new Date().toISOString().slice(0,10)).replace(/-/g,'.');
