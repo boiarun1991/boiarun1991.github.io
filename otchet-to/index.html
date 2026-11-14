@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-report-version="2" data-release="2.4.2">
+<html lang="ru" data-report-version="2" data-release="2.4.3">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="Отчёт ТО"/>
 <meta name="theme-color" content="#0F1C2E"/>
-<title>Акт ТО ЦКП · 2.4.2</title>
+<title>Акт ТО ЦКП · 2.4.3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -299,9 +299,11 @@ body{font-family:var(--font);background:#E8EEF4;color:var(--text);min-height:100
 .pdf-table tbody tr:nth-child(odd) td{background:#F8FAFB}
 .pdf-table tbody td{padding:5px 8px;border-bottom:1px solid var(--gray2);vertical-align:middle;font-size:11px}
 /* All-hall brightness summary only */
-.pdf-summary-fl{table-layout:fixed}
+#cameraTorch[aria-pressed="true"]{background:#FFF5D9;color:#533500;border-color:#E7BE62}
+#cameraTorchStatus:empty{display:none}
+.pdf-summary-fl th,.pdf-summary-fl td{padding-left:5px;padding-right:5px}
 .pdf-summary-fl thead th{font-size:10.5px;text-transform:none}
-.pdf-summary-fl th:nth-child(n+3),.pdf-summary-fl td:nth-child(n+3){text-align:center}
+.pdf-summary-fl th:nth-child(n+2),.pdf-summary-fl td:nth-child(n+2){text-align:center}
 .pdf-summary-fl tbody td{overflow-wrap:anywhere}
 .pdf-summary-fl tbody tr td[data-change="up"]{background:#E6F4E9}
 .pdf-summary-fl tbody tr td[data-change="same"]{background:#FFF5D9}
@@ -623,7 +625,8 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 
 <dialog id="batchCamera" aria-labelledby="cameraTitle">
 <div class="sec-title" id="cameraTitle">Камера</div><video id="cameraVideo" autoplay muted playsinline></video>
-<div class="module-actions"><button id="takePhoto" class="btn btn-primary" onclick="takeBatchPhoto()" disabled>Снять фото</button><button class="btn btn-ghost" onclick="useNativeCamera()">Камера iPhone</button><button class="btn btn-ghost" onclick="closeBatchCamera()">Готово</button></div>
+<div class="module-actions"><button id="takePhoto" class="btn btn-primary" onclick="takeBatchPhoto()" disabled>Снять фото</button><button type="button" id="cameraTorch" class="btn btn-ghost" aria-pressed="false" onclick="toggleBatchTorch()" hidden disabled>Фонарь</button><button class="btn btn-ghost" onclick="useNativeCamera()">Камера iPhone</button><button class="btn btn-ghost" onclick="closeBatchCamera()">Готово</button></div>
+<div id="cameraTorchStatus" role="status"></div>
 <div id="cameraCount" role="status"></div></dialog>
 <div id="pdfPages"></div>
 <div class="pdf-overlay" id="pdfOverlay"><div class="pdf-box"><div class="spinner"></div><strong>Формируется PDF…</strong><p>Рендеринг страниц отчёта</p></div></div>
@@ -984,12 +987,41 @@ async function addPhotosFromFiles(files){
 }
 function addPhotoFromBlob(blob){return addPhotosFromFiles([blob]);}
 let cameraStream=null,cameraSession=null,cameraShots=0;
+function resetBatchTorch(){
+  const button=document.getElementById('cameraTorch');
+  button.hidden=true;button.disabled=true;
+  button.setAttribute('aria-pressed','false');
+  document.getElementById('cameraTorchStatus').textContent='';
+}
+function offerBatchTorch(track){
+  const torch=track?.getCapabilities?.()?.torch;
+  if(track?.applyConstraints&&(torch===true||(Array.isArray(torch)&&torch.includes(true)))){
+    const button=document.getElementById('cameraTorch');
+    button.hidden=false;button.disabled=false;
+  }
+}
+async function toggleBatchTorch(){
+  const session=cameraSession,track=cameraStream?.getVideoTracks()[0];
+  const button=document.getElementById('cameraTorch');
+  const status=document.getElementById('cameraTorchStatus');
+  if(!session||!track||track.readyState!=='live'||button.hidden||button.disabled)return;
+  const on=button.getAttribute('aria-pressed')!=='true';
+  button.disabled=true;status.textContent='';
+  try{
+    await track.applyConstraints({advanced:[{torch:on}]});
+    if(cameraSession===session)button.setAttribute('aria-pressed',String(on));
+  }catch{
+    if(cameraSession===session)status.textContent=on?'Не удалось включить фонарь.':'Не удалось выключить фонарь. При закрытии камеры он погаснет.';
+  }finally{
+    if(cameraSession===session)button.disabled=false;
+  }
+}
 async function openBatchCamera(){
   const dialog=document.getElementById('batchCamera');
   if(!navigator.mediaDevices?.getUserMedia||!dialog.showModal){document.getElementById('photoCamera').click();return;}
   if(dialog.open)return;
   const session=cameraSession=captureTarget();
-  cameraShots=0;
+  cameraShots=0;resetBatchTorch();
   document.getElementById('cameraCount').textContent='Подключение камеры…';
   dialog.showModal();
   try{
@@ -1000,9 +1032,15 @@ async function openBatchCamera(){
     video.srcObject=stream;await video.play();
     if(cameraSession!==session)return;
     document.getElementById('takePhoto').disabled=false;
+    const track=stream.getVideoTracks()[0];
+    offerBatchTorch(track);
+    track?.addEventListener('ended',()=>{if(cameraSession===session)resetBatchTorch();});
     document.getElementById('cameraCount').textContent='Можно сделать несколько снимков подряд';
   }catch{
-    if(cameraSession===session)document.getElementById('cameraCount').textContent='Нет доступа к камере в браузере. Нажмите «Камера iPhone» или выберите снимки из галереи.';
+    if(cameraSession===session){
+      stopBatchCamera();
+      document.getElementById('cameraCount').textContent='Нет доступа к камере в браузере. Нажмите «Камера iPhone» или выберите снимки из галереи.';
+    }
   }
 }
 function takeBatchPhoto(){
@@ -1016,13 +1054,14 @@ function takeBatchPhoto(){
   document.getElementById('cameraCount').textContent='Снимков за эту серию: '+(++cameraShots);
 }
 function stopBatchCamera(){
-  cameraSession=null;
+  cameraSession=null;resetBatchTorch();
   cameraStream?.getTracks().forEach(t=>t.stop());cameraStream=null;
   document.getElementById('cameraVideo').srcObject=null;document.getElementById('takePhoto').disabled=true;
 }
 function closeBatchCamera(){stopBatchCamera();document.getElementById('batchCamera').close();}
 function useNativeCamera(){closeBatchCamera();document.getElementById('photoCamera').click();}
 document.getElementById('batchCamera').addEventListener('cancel',stopBatchCamera);
+document.getElementById('batchCamera').addEventListener('close',e=>{if(!e.target.open&&cameraSession)stopBatchCamera();});
 window.addEventListener('pagehide',stopBatchCamera);
 function removePhoto(i){
   photos.splice(i,1);
@@ -1751,69 +1790,44 @@ function appendProjectorNotes(C,h){
     ...(h.importNotes||[]).map(n=>['Примечание из добавленного акта',n])
   ].filter(([,v])=>v?.trim()));
 }
-function summaryBrightnessRows(selectedHalls){
-  const formatPercent=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2,signDisplay:'exceptZero'});
+function summaryBrightnessChange(before,after,disputed){
   const parseFL=value=>{
-    const match=value.match(/^([+]?\d+(?:[.,]\d+)?|[+]?[.,]\d+)\s*(?:fl|фл)?$/iu);
+    const match=String(value??'').trim().match(/^([+]?\d+(?:[.,]\d+)?|[+]?[.,]\d+)\s*(?:fl|фл)?$/iu);
     return match?Number(match[1].replace(',','.')):NaN;
   };
-  return selectedHalls.flatMap(([h,i])=>{
-    const f=h.fields||{}, label=projectorLabel(h,i);
-    const with3D=f.f_has3d==='yes'||(f.f_has3d===undefined&&[f.f_3d,f.f_3dsn].some(v=>String(v??'').trim()));
-    const conflicts=new Set(validMergeConflicts(h.mergeConflicts).map(r=>r.label));
-    const rows=IMG_PARAMS.slice(0,4).flatMap((p,j)=>{
-      if(p.only3D&&!with3D)return [];
-      const before=String(f['mv_imgTable_'+j+'_b']??'').trim();
-      const after=String(f['mv_imgTable_'+j+'_a']??'').trim();
-      if(!before&&!after)return [];
-      const b=parseFL(before),a=parseFL(after), change=(a-b)/b*100;
-      const disputed=conflicts.has(p.name+' — до')||conflicts.has(p.name+' — после');
-      const valid=!disputed&&b>0&&Number.isFinite(change);
-      const tone=!valid?'':a>b?'up':a<b?'down':'same';
-      const percentage=!valid?'—':change!==0&&Math.abs(change)<0.005
-        ?(change>0?'+':'−')+'<0,01 %':formatPercent.format(change)+' %';
-      return [{label,group:i,format:p.name.replace('Освещённость экрана ',''),before,after,tone,percentage,disputed}];
-    });
-    return rows.length?rows:[{label,group:i,format:'—',before:'',after:'',tone:'',percentage:'—',disputed:false}];
-  });
+  const b=parseFL(before),a=parseFL(after),change=(a-b)/b*100;
+  if(disputed||!(b>0)||!Number.isFinite(b)||!Number.isFinite(change))return {tone:'',percentage:'—'};
+  const tone=a>b?'up':a<b?'down':'same';
+  const percentage=change!==0&&Math.abs(change)<0.005
+    ?(change>0?'+':'−')+'<0,01 %'
+    :new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2,signDisplay:'exceptZero'}).format(change)+' %';
+  return {tone,percentage};
 }
-function appendSummaryBrightness(C,selectedHalls,stripHall){
-  const rows=summaryBrightnessRows(selectedHalls);
-  const render=(start,count)=>{
-    const slice=rows.slice(start,start+count);
-    const tableRows=slice.map((r,i)=>{
-      const first=i===0||slice[i-1].group!==r.group;
-      const tone=r.tone?' data-change="'+r.tone+'"':'';
-      return '<tr><td>'+esc(first?r.label:'')+'</td><td>'+esc(r.format)+'</td><td>'+esc(r.before||'—')+'</td><td'+tone+'>'+esc(r.after||'—')+'</td><td'+tone+'>'+esc(r.percentage)+'</td></tr>';
-    }).join('');
-    const note='Процент рассчитан относительно замера до ТО. Прочерк — нет сопоставимых замеров или «Было FL» равно нулю.'+
-      (slice.some(r=>r.disputed)?' Расходящиеся замеры приведены в разделе «Расхождения при объединении».':'');
-    return pdfPage('',start?'Сравнение яркости по залам · продолжение':'Сравнение яркости по залам',
-      '<table class="pdf-table pdf-summary-fl"><colgroup><col style="width:36%"><col style="width:16%"><col style="width:16%"><col style="width:16%"><col style="width:16%"></colgroup>'+
-      '<thead><tr><th>Зал / проектор</th><th>Формат</th><th>Было FL</th><th>Стало FL</th><th>Изменение, %</th></tr></thead><tbody>'+tableRows+'</tbody></table>'+
-      '<p class="pdf-summary-fl-note">'+note+'</p>');
-  };
-  for(let start=0;start<rows.length;){
-    let count=Math.min(23,rows.length-start);
-    C.insertAdjacentHTML('beforeend',render(start,count));
-    while(count>1&&C.lastElementChild.offsetHeight>794){
-      count--;
-      C.lastElementChild.outerHTML=render(start,count);
-    }
-    stripHall(C.lastElementChild);
-    start+=count;
-  }
+function summaryBrightnessTable(h){
+  const f=h.fields||{};
+  const conflicts=new Set(validMergeConflicts(h.mergeConflicts).map(r=>r.label));
+  const rows=IMG_PARAMS.slice(0,4).map((p,j)=>{
+    if(p.only3D&&!has3D())return '';
+    const before=String(f['mv_imgTable_'+j+'_b']??'').trim();
+    const after=String(f['mv_imgTable_'+j+'_a']??'').trim();
+    const disputed=conflicts.has(p.name+' — до')||conflicts.has(p.name+' — после');
+    const {tone,percentage}=summaryBrightnessChange(before,after,disputed);
+    const changeAttr=tone?' data-change="'+tone+'"':'';
+    return '<tr><td>'+esc(p.name)+'</td><td>'+esc(before||'—')+'</td><td'+changeAttr+'>'+esc(after||'—')+'</td><td'+changeAttr+'>'+esc(percentage)+'</td></tr>';
+  }).join('');
+  return '<div><div class="pdf-col-title">Яркость</div><table class="pdf-table pdf-summary-fl">'+
+    '<thead><tr><th>Параметр</th><th>Было FL</th><th>Стало FL</th><th>Изменение, %</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+    '<p class="pdf-summary-fl-note">Процент от замера до ТО. Прочерк — нет сопоставимых замеров или исходный замер равен нулю.</p></div>';
 }
 function appendSummary(C,h,i){
   const f=h.fields||{};
   const row=(label,b,a)=>'<tr><td>'+esc(label)+'</td><td>'+esc(String(b??'').trim()||'нет данных')+'</td><td>'+esc(String(a??'').trim()||'нет данных')+'</td></tr>';
   const table=(heading,unit,rows)=>'<div><div class="pdf-col-title">'+heading+'</div><table class="pdf-table"><thead><tr><th>Параметр</th><th>До, '+unit+'</th><th>После, '+unit+'</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
-  const light=IMG_PARAMS.slice(0,4).map((p,j)=>p.only3D&&!has3D()?'':row(p.name,f['mv_imgTable_'+j+'_b'],f['mv_imgTable_'+j+'_a'])).join('');
   const audio=AUDIO_CHANNELS.map(ch=>row(ch.name,f['ach_'+ch.id+'_b'],f['ach_'+ch.id+'_a'])).join('');
   const notes=summaryNotes(h);
   if(!notes.length)notes.push(['Неисправности, замены и примечания','Нет данных']);
   const info=has3D()?'<div class="pdf-info-grid">'+[['Модель 3D-системы',f.f_3d],['Серийный номер 3D-системы',f.f_3dsn]].map(([label,value])=>'<div class="pdf-info-cell"><div class="pdf-info-label">'+esc(label)+'</div><div class="pdf-info-value">'+esc(value||'—')+'</div></div>').join('')+'</div>':'';
-  const intro=info+'<div class="pdf-two-col">'+table('Яркость','фут-ламберт',light)+table('Звук','дБ',audio)+'</div>';
+  const intro=info+'<div class="pdf-two-col">'+summaryBrightnessTable(h)+table('Звук','дБ',audio)+'</div>';
   const inline=notes.length<=4&&notes.every(([,v])=>v.length<=120&&!v.includes('\n'));
   C.insertAdjacentHTML('beforeend',pdfPage('',projectorLabel(h,i),intro+(inline?notesMarkup(notes):'')));
   if(!inline)appendNotesPages(C,'Сводка · неисправности, замены и примечания',notes);
@@ -1832,7 +1846,6 @@ function buildPDFPages(mode='full',selected=null){
   stripHall(C.lastElementChild);
   try{
     selectedHalls.sort(([a,ai],[b,bi])=>hallKey(a).localeCompare(hallKey(b),'ru',{numeric:true})||ai-bi);
-    if(mode==='summary')appendSummaryBrightness(C,selectedHalls,stripHall);
     selectedHalls.forEach(([h,i])=>{
       hallIndex=i;restoreHall();
       if(mode==='summary'){appendSummary(C,h,i);appendMergePDF(C,h);return;}
