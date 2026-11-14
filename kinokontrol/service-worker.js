@@ -1,5 +1,5 @@
-const CACHE='kinokontrol-v09-1';
-const ASSETS=['./','./index.html','./manifest.webmanifest','./icon.svg','./photos-v09.js'];
+const CACHE='kinokontrol-v091-1';
+const ASSETS=['./','./index.html','./manifest.webmanifest','./icon.svg','./photos-v091.js'];
 const scope=new URL(self.registration.scope);
 const assets=new Set(ASSETS.map(x=>new URL(x,scope).href));
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS.map(x=>new Request(new URL(x,scope),{cache:'reload'})))).then(()=>self.skipWaiting())));
