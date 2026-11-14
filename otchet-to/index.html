@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-report-version="2">
+<html lang="ru" data-report-version="2" data-release="2.3">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="Отчёт ТО"/>
 <meta name="theme-color" content="#0F1C2E"/>
-<title>Акт ТО ЦКП</title>
+<title>Акт ТО ЦКП · 2.3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -342,13 +342,25 @@ body{font-family:var(--font);background:#E8EEF4;color:var(--text);min-height:100
 .pdf-sig-row,.pdf-info-value,.pdf-notes-text{overflow-wrap:anywhere}
 @media(max-width:600px){.topbar-left>div:last-child{min-width:0}.topbar h1{white-space:normal}.filters-grid td:first-child{overflow-wrap:anywhere}}
 @media (pointer:coarse){input:not([type=checkbox]):not([type=file]),select,textarea{font-size:16px!important}.btn{min-height:44px}.photo-action-btn{min-width:36px;min-height:36px}.filters-grid td input[type=checkbox]{width:20px;height:20px}}
-@media (max-height:500px) and (orientation:landscape){.topbar{position:relative}}
+/* Keep the title and both selectors in the same sticky region. */
+.app-header{position:sticky;top:0;z-index:200}
+.app-header .topbar{position:relative}
+body{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+.section-card .nav-btns{position:fixed;z-index:190;bottom:0;left:0;right:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;padding:8px max(12px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));margin:0;background:#fff;border-top:1px solid #D2DFE9;box-shadow:0 -3px 14px #0F1C2E20}
+.section-card .nav-btns .step-info{display:none}
+.section-card .nav-btns .btn{grid-row:1;justify-content:center;min-height:54px;font-size:16px}
+.section-card .nav-btns .btn-ghost{grid-column:1;color:#23465C}
+.section-card .nav-btns .btn-primary{grid-column:2}
+.pdf-work-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.pdf-work-columns td{overflow-wrap:anywhere}
+
 </style>
 </head>
 <body>
 
 <!-- ═══ TOP BAR ═══ -->
-<div class="topbar">
+<header class="app-header"><div class="topbar">
   <div class="topbar-left">
     <div class="logo-mark">С5</div>
     <div>
@@ -364,7 +376,7 @@ body{font-family:var(--font);background:#E8EEF4;color:var(--text);min-height:100
 
 <!-- ═══ STEPS ═══ -->
 <div class="steps-nav wizard-status" id="stepsNav" aria-label="Ход заполнения"></div>
-<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:14%"></div></div>
+<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:14%"></div></div></header>
 
 <div class="main">
 
@@ -394,8 +406,9 @@ body{font-family:var(--font);background:#E8EEF4;color:var(--text);min-height:100
     <div class="fg fg-4">
       <div class="field"><label>Объектив (модель)</label><input type="text" id="f_lens" placeholder="Invision 47-255…"/></div>
       <div class="field"><label>С/н объектива</label><input type="text" id="f_lenssn"/></div>
-      <div class="field"><label>3D система (модель)</label><input type="text" id="f_3d" placeholder="XPAND / RealD…"/></div>
-      <div class="field"><label>С/н 3D системы</label><input type="text" id="f_3dsn"/></div>
+      <div class="field"><label for="f_has3d">3D-система</label><select id="f_has3d" onchange="sync3D()"><option value="">Выберите</option><option value="yes">Есть</option><option value="no">Нет</option></select></div>
+      <div class="field" data-3d-only hidden><label for="f_3d">Модель 3D-системы</label><input type="text" id="f_3d" placeholder="XPAND / RealD…"/></div>
+      <div class="field" data-3d-only hidden><label for="f_3dsn">Серийный номер 3D-системы</label><input type="text" id="f_3dsn"/></div>
     </div>
     <div class="fg fg-4">
       <div class="field"><label>Модель сервера</label><input type="text" id="f_srvmodel" placeholder="Dolby IMS3000 / GDC…"/></div>
@@ -488,8 +501,7 @@ body{font-family:var(--font);background:#E8EEF4;color:var(--text);min-height:100
     <div id="filtersWrap" style="margin-bottom:16px"></div>
     <div class="notes-grid">
       <div class="field"><label for="hall_faults">Неисправности</label><textarea id="hall_faults" rows="3" placeholder="Если неисправностей нет, укажи «Нет»"></textarea></div>
-      <div class="field"><label for="hall_replacements">Замены</label><textarea id="hall_replacements" rows="3" placeholder="Если замен нет, укажи «Нет»"></textarea></div>
-      <div class="field"><label for="hall_notes">Примечания по залу / проектору</label><textarea id="hall_notes" rows="3"></textarea></div>
+      <div class="field"><label for="hall_notes">Примечания по залу / проектору</label><textarea id="hall_notes" rows="3" placeholder="Укажи замены и другие примечания по залу"></textarea></div>
     </div>
     <table class="works-table">
       <thead><tr>
@@ -621,11 +633,11 @@ const LASER_FILTERS=[['laser_in','Внутренний фильтр лазерн
 const STATUSES=[['ok','В норме'],['cl','Очищен'],['rp','Заменён']];
 const WORKS=[
  ['common','Очистка корпуса снаружи'],['common','Удаление пыли из внутренних отсеков'],['common','Очистка воздухозаборных решёток'],['common','Очистка воздуховодов'],['common','Очистка вентиляторов'],['common','Очистка радиаторов охлаждения'],
- ['lamp','Демонтаж ламп-хауса'],['lamp','Очистка ламп-хауса'],['lamp','Очистка лампового отсека'],['lamp','Очистка отражателя ламп-хауса'],['lamp','Очистка УФ-фильтра лампового модуля'],['lamp','Очистка холодного зеркала'],['lamp','Проверка анодного контакта лампы'],['lamp','Проверка катодного контакта лампы'],['lamp','Замена лампы'],['lamp','Монтаж ламп-хауса'],
+ ['lamp','Демонтаж ламп-хауса'],['lamp','Очистка ламп-хауса'],['lamp','Очистка лампового отсека'],['lamp','Очистка отражателя ламп-хауса'],['lamp','Очистка УФ-фильтра лампового модуля'],['lamp','Очистка холодного зеркала'],['lamp','Проверка анодного контакта лампы'],['lamp','Проверка катодного контакта лампы'],['lamp',''],['lamp','Монтаж ламп-хауса'],
  ['laser','Осмотр лазерного блока'],['laser','Проверка охлаждения лазерного блока'],['laser','Проверка диагностики лазерного блока'],
  ['common','Осмотр входа световой трубы и её маски'],['common','Демонтаж светового блока («матрицы»)'],['common','Очистка световой трубы (интегратора)'],['common','Очистка выходной поверхности призмы'],['common','Очистка линз осветительного тракта'],['common','Очистка объектива'],['common','Очистка стекла проекционного окна'],
  ...[['красного','R'],['зелёного','G'],['синего','B']].flatMap(([c,k])=>['Поднятие','Очистка защитного стекла','Установка'].map(a=>['dmd',a+' '+c+' DMD-чипа ('+k+')'])),
- ['common','Монтаж светового блока («матрицы»)'],['common','Проверка уровня охлаждающей жидкости'],['common','Замена охлаждающей жидкости'],['common','Проверка герметичности контура охлаждения'],['common','Проверка изображения на белом и чёрном полях'],['common','Проверка фокуса'],['common','Проверка конвергенции по тестовой сетке'],['common','Регулировка конвергенции'],['common','Замер яркости до ТО'],['common','Замер яркости после ТО'],['common','Проверка журнала ошибок после сборки']
+ ['common','Монтаж светового блока («матрицы»)'],['common','Проверка уровня охлаждающей жидкости'],['common',''],['common','Проверка герметичности контура охлаждения'],['common','Проверка изображения на белом и чёрном полях'],['common','Проверка фокуса'],['common','Проверка конвергенции по тестовой сетке'],['common','Регулировка конвергенции'],['common','Замер яркости до ТО'],['common','Замер яркости после ТО'],['common','Проверка журнала ошибок после сборки']
 ];
 function workAllowed(group){
   if(group==='dmd')return !(g('f_brand')==='Barco'&&g('f_model')==='DP2K-32B');
@@ -637,7 +649,10 @@ function modelFilters(){
 }
 const filterKey=()=>[g('f_brand'),g('f_model'),g('f_light')].map((v,i)=>i===1&&g('f_brand')!=='Barco'?'':v).join('_');
 let customFilters={};
+const has3D=()=>g('f_has3d')==='yes';
+function sync3D(){document.querySelectorAll('[data-3d-only]').forEach(el=>el.hidden=!has3D());}
 function syncProfile(){
+  sync3D();
   const brand=g('f_brand'), model=g('f_model'), light=g('f_light');
   document.getElementById('modelField').hidden=brand!=='Barco';
   document.getElementById('lampField').hidden=light!=='lamp';
@@ -647,14 +662,14 @@ function syncProfile(){
   if(![...document.querySelectorAll('[data-filter-key]')].some(el=>el.dataset.filterKey===filterKey()))buildFiltersTable();
 }
 const AUDIO_CHANNELS=[
-  {id:'L',  name:'Левый (L)',                   opts:['Норма','Требует ремонта','Скорректировано']},
-  {id:'C',  name:'Центральный (C)',              opts:['Норма','Требует ремонта','Скорректировано']},
-  {id:'R',  name:'Правый (R)',                   opts:['Норма','Требует ремонта','Скорректировано']},
+  {id:'L',  name:'Левый (L, 85 дБ)',                   opts:['Норма','Требует ремонта','Скорректировано']},
+  {id:'C',  name:'Центральный (C, 85 дБ)',              opts:['Норма','Требует ремонта','Скорректировано']},
+  {id:'R',  name:'Правый (R, 85 дБ)',                   opts:['Норма','Требует ремонта','Скорректировано']},
   {id:'Ls', name:'Левый сурраунд (Ls)',          opts:['Норма','Требует ремонта','Скорректировано']},
   {id:'Rs', name:'Правый сурраунд (Rs)',         opts:['Норма','Требует ремонта','Скорректировано']},
-  {id:'Lss',name:'Лев. задний сурраунд (Lss)',  opts:['Норма','Требует ремонта','Скорректировано']},
-  {id:'Rss',name:'Прав. задний сурраунд (Rss)', opts:['Норма','Требует ремонта','Скорректировано']},
-  {id:'Sub',name:'Сабвуфер (Sub)',               opts:['Норма','Требует ремонта','Скорректировано']},
+  {id:'Lss',name:'Лев. задний сурраунд (Lss, 82 дБ)',  opts:['Норма','Требует ремонта','Скорректировано']},
+  {id:'Rss',name:'Прав. задний сурраунд (Rss, 82 дБ)', opts:['Норма','Требует ремонта','Скорректировано']},
+  {id:'Sub',name:'Сабвуфер (Sub, 85 дБ)',               opts:['Норма','Требует ремонта','Скорректировано']},
 ];
 const AV_PARAMS=[
   {name:'Диагностика звук. процессора',norm:'85.5/82.5 дБ',opts:['Норма','Исправлено','Требует внимания']},
@@ -666,12 +681,12 @@ const IMG_PARAMS=[
   {name:'Освещённость экрана Flat',norm:'Min 14 фл',opts:['Норма','Скорректировано']},
   {name:'Освещённость экрана Scope',norm:'Min 14 фл',opts:['Норма','Скорректировано']},
   {name:'Освещённость экрана 2D',norm:'Min 14 фл',opts:['Норма','Скорректировано']},
-  {name:'Освещённость экрана 3D',norm:'Min 4 фл',opts:['Норма','Скорректировано']},
-  {name:'Геометрия / кадрирование',norm:'—',opts:['Норма','Скорректировано']},
-  {name:'Резкость изображения',norm:'—',opts:['Норма','Настроено']},
-  {name:'Конвергенция цветов',norm:'—',opts:['Норма','Скорректировано']},
-  {name:'Настройка 3D системы',norm:'—',opts:['Норма','Настроено']},
-  {name:'Положение форматов',norm:'—',opts:['Норма','Скорректировано']},
+  {name:'Освещённость экрана 3D',only3D:true,norm:'Min 4 фл',opts:['Норма','Скорректировано']},
+  {name:'Геометрия / кадрирование',statusOnly:true,norm:'—',opts:['Норма','Скорректировано']},
+  {name:'Резкость изображения',statusOnly:true,norm:'—',opts:['Норма','Настроено']},
+  {name:'Конвергенция цветов',statusOnly:true,norm:'—',opts:['Норма','Скорректировано']},
+  {name:'Настройка 3D системы',statusOnly:true,only3D:true,norm:'—',opts:['Норма','Настроено']},
+  {name:'Положение форматов',statusOnly:true,norm:'—',opts:['Норма','Скорректировано']},
 ];
 const SW_LABELS=['ПО проектора актуально','ПО плей сервера актуально','ПО ICP актуально','ПО аудиопроцессора актуально','Цвет-профиль: номинальный','Автокоррекция яркости CLO: норма','Самодиагностика пройдена','Системное время синхронизировано'];
 
@@ -813,7 +828,12 @@ function buildImgTable(){
   const tb=document.createElement('tbody');
   IMG_PARAMS.forEach((p,i)=>{
     const tr=document.createElement('tr');
+    if(p.only3D){tr.setAttribute('data-3d-only','');tr.hidden=!has3D();}
     const btns=p.opts.map(o=>`<button class="status-btn" onclick="selStatus(this,'${o}')">${o}</button>`).join('');
+    if(p.statusOnly){
+      tr.innerHTML=`<td style="font-weight:600;font-size:11px">${p.name}</td><td colspan="5"><div class="status-btns" id="sb_imgTable_${i}">${btns}</div></td>`;
+      tb.appendChild(tr);return;
+    }
     tr.innerHTML=`<td style="font-weight:600;font-size:11px">${p.name}</td><td style="color:#007A8A;font-size:10px">${p.norm}</td><td><input type="text" id="mv_imgTable_${i}_b" placeholder="—" style="width:58px"/></td><td><input type="text" id="mv_imgTable_${i}_a" placeholder="—" style="width:58px"/></td><td><div class="status-btns" id="sb_imgTable_${i}">${btns}</div></td><td><input type="text" class="param-note-inp" id="mv_imgTable_${i}_nt" placeholder="…"/></td>`;
     tb.appendChild(tr);
   }); t.appendChild(tb);
@@ -1123,7 +1143,9 @@ function storeHall(){
   halls[hallIndex]={id:halls[hallIndex].id||newProjectorId(),fields,statuses,workCount,customFilters,detailPhotos,photos,swScreenshots,importNotes:halls[hallIndex].importNotes||[]};
 }
 function restoreHall(){
-  const h=halls[hallIndex], fields=h.fields||{};
+  const h=halls[hallIndex], fields={...h.fields};
+  if(fields.f_has3d===undefined&&(fields.f_3d?.trim()||fields.f_3dsn?.trim()))fields.f_has3d='yes';
+  fields.hall_notes=hallNotesText(fields);
   photos=h.photos||[];swScreenshots=h.swScreenshots||[];detailPhotos=h.detailPhotos||{};customFilters=h.customFilters||{};
   // Keep each hall's image arrays attached while asynchronous reads finish.
   h.photos=photos;h.swScreenshots=swScreenshots;h.detailPhotos=detailPhotos;h.customFilters=customFilters;
@@ -1368,8 +1390,7 @@ function buildHallPDFPages(){
     <div class="pdf-metric"><div class="pdf-metric-label">Зал №</div><div class="pdf-metric-value" style="font-size:13px">${esc(g('f_hall')||'—')}</div></div>
   </div>`;
   const infoCells=[
-    ['С/н ЦКП',g('f_projsn')],['Объектив',g('f_lens')],['С/н объектива',g('f_lenssn')],['3D система',g('f_3d')],
-    ['С/н 3D',g('f_3dsn')],['Модель сервера',g('f_srvmodel')],['С/н сервера',g('f_srvsn')],['Модель ICP',g('f_icp')],
+    ['С/н ЦКП',g('f_projsn')],['Объектив',g('f_lens')],['С/н объектива',g('f_lenssn')],...(has3D()?[['Модель 3D-системы',g('f_3d')],['Серийный номер 3D-системы',g('f_3dsn')]]:[]),['Модель сервера',g('f_srvmodel')],['С/н сервера',g('f_srvsn')],['Модель ICP',g('f_icp')],
     ['С/н ICP',g('f_icpsn')],['Аудиопроцессор',g('f_audio')],['С/н аудиопроц.',g('f_audiosn')],
   ].map(([l,v])=>`<div class="pdf-info-cell"><div class="pdf-info-label">${l}</div><div class="pdf-info-value">${esc(v||'—')}</div></div>`).join('');
   C.innerHTML+=pdfPage('1','Общие сведения об оборудовании',metrics+`<div class="pdf-info-grid" style="grid-template-columns:repeat(4,1fr)">${infoCells}</div>`);
@@ -1416,7 +1437,8 @@ function buildHallPDFPages(){
   }).join('');
   const avT=`<table class="pdf-table"><thead><tr><th>Параметр</th><th>Статус</th><th>Примечание</th></tr></thead><tbody>${avRows}</tbody></table>`;
   const imRows=IMG_PARAMS.map((p,i)=>{
-    if(p.name==='Конвергенция цветов'&&!gc('include_cv'))return '';
+    if(p.only3D&&!has3D())return '';
+    if(p.statusOnly)return `<tr><td style="font-weight:600">${esc(p.name)}</td><td colspan="5">${getBadge(document.getElementById('sb_imgTable_'+i))}</td></tr>`;
     const vb=esc(document.getElementById(`mv_imgTable_${i}_b`)?.value||'—');
     const va=esc(document.getElementById(`mv_imgTable_${i}_a`)?.value||'—');
     const badge=getBadge(document.getElementById(`sb_imgTable_${i}`));
@@ -1427,7 +1449,7 @@ function buildHallPDFPages(){
   C.innerHTML+=pdfPage('5','Параметры звука, вентиляции и изображения',`<div class="pdf-two-col"><div><div class="pdf-col-title">Параметры звука и вентиляция</div>${avT}</div><div><div class="pdf-col-title">Параметры изображения</div>${imT}</div></div>`);
 
   // PAGE 6 — Works
-  const rows=WORKS.flatMap(([group,label],i)=>workAllowed(group)&&gc('job_'+i)?[[label,'','']]:[]);
+  const rows=WORKS.flatMap(([group,label],i)=>label&&workAllowed(group)&&gc('job_'+i)?[[label,'','']]:[]);
   document.querySelectorAll('[data-filter-key]').forEach(box=>{
     if(box.dataset.filterKey!==filterKey())return;
     box.querySelectorAll('[data-filter-id]').forEach(tr=>{
@@ -1439,11 +1461,14 @@ function buildHallPDFPages(){
   for(let i=1;i<=workCount;i++){
     if(gc('wk_'+i)&&g('wn_'+i).trim())rows.push([g('wn_'+i),g('wa_'+i),g('wc_'+i)]);
   }
-  const workPageSize=16;
+  const twoColumns=![g('hall_faults'),g('hall_notes')].some(v=>v.trim());
+  const workPageSize=twoColumns?24:16;
   const workPages=Math.max(1,Math.ceil(rows.length/workPageSize));
+  const worksTable=(slice,offset)=>`<table class="pdf-table"><thead><tr><th style="width:28px">№</th><th>Наименование работы / детали</th><th${twoColumns?'':' style="width:180px"'}>Артикул / С/н</th><th>Результат / Примечание</th></tr></thead><tbody>${slice.map((row,i)=>'<tr><td style="text-align:center;font-weight:700;color:#007A8A">'+(offset+i+1)+'</td>'+row.map(val=>'<td>'+esc(val)+'</td>').join('')+'</tr>').join('')||'<tr><td colspan="4" style="text-align:center;color:#94A3B8;padding:16px">Работы не отмечены</td></tr>'}</tbody></table>`;
   for(let p=0;p<workPages;p++){
-    const wRows=rows.slice(p*workPageSize,(p+1)*workPageSize).map((row,i)=>'<tr><td style="text-align:center;font-weight:700;color:#007A8A">'+(p*workPageSize+i+1)+'</td>'+row.map(val=>'<td>'+esc(val)+'</td>').join('')+'</tr>').join('')||'<tr><td colspan="4" style="text-align:center;color:#94A3B8;padding:16px">Работы не отмечены</td></tr>';
-    C.innerHTML+=pdfPage(String(6+p),'Выполненные работы и замены деталей',`<table class="pdf-table"><thead><tr><th style="width:28px">№</th><th>Наименование работы / детали</th><th style="width:180px">Артикул / С/н</th><th>Результат / Примечание</th></tr></thead><tbody>${wRows}</tbody></table>`);
+    const offset=p*workPageSize,slice=rows.slice(offset,offset+workPageSize),mid=Math.ceil(slice.length/2);
+    const layout=twoColumns&&slice.length>1?'<div class="pdf-work-columns">'+worksTable(slice.slice(0,mid),offset)+worksTable(slice.slice(mid),offset+mid)+'</div>':worksTable(slice,offset);
+    C.innerHTML+=pdfPage(String(6+p),'Выполненные работы и замены деталей',layout);
   }
 
   // PHOTO SHELL PAGES — actual photos are overlaid in exportPDF() at native resolution
@@ -1461,18 +1486,22 @@ function buildHallPDFPages(){
     C.innerHTML+=pdfPage(String(7+workPages+i),title,`<div data-photo-page="${offset+i}" style="flex:1;min-height:560px;background:#F8FAFB;border-radius:6px;">${items.length?items.map((ph,j)=>`<div style="position:absolute;left:${(7+(j%2)*143.5+1)/297*1122}px;top:${(33+Math.floor(j/2)*86.5+77.5+1)/210*794}px;font-size:10px;color:#64748B;max-width:510px;overflow:hidden;white-space:nowrap">${esc(ph.caption||'')}</div>`).join(''):'<div style="padding:40px;text-align:center;color:#94A3B8;font-size:13px">Фотографии не загружены</div>'}</div>`);
   });
 }
+function hallNotesText(f){
+  const clean=v=>typeof v==='string'?v.trim():'';
+  const legacy=clean(f.hall_replacements);
+  return [clean(f.hall_notes),legacy?'Замены: '+legacy:''].filter(Boolean).join('\n');
+}
 function summaryNotes(h){
   const result=[], f=h.fields||{}, sts=h.statuses||{};
   const append=(label,value)=>{if(typeof value==='string'&&value.trim())result.push([label,value.trim()]);};
   append('Неисправности',f.hall_faults);
-  append('Замены',f.hall_replacements);
-  append('Примечания',f.hall_notes);
+  append('Примечания',hallNotesText(f));
   (h.importNotes||[]).forEach(v=>append('Примечание из добавленного акта',v));
   AV_PARAMS.forEach((p,i)=>{
     const status=sts['sb_avTable_'+i], note=f['mv_avTable_'+i+'_nt'];
     append(p.name,[status==='Норма'?'':status,note].filter(Boolean).join(' · '));
   });
-  IMG_PARAMS.forEach((p,i)=>append(p.name,f['mv_imgTable_'+i+'_nt']));
+  IMG_PARAMS.forEach((p,i)=>{if(!p.statusOnly&&(!p.only3D||has3D()))append(p.name,f['mv_imgTable_'+i+'_nt']);});
   AUDIO_CHANNELS.forEach(ch=>{
     const status=sts['ach_sb_'+ch.id];
     append(ch.name,[status==='Норма'?'':status,f['ach_'+ch.id+'_nt']].filter(Boolean).join(' · '));
@@ -1484,7 +1513,6 @@ function summaryNotes(h){
       if(gc(id+'_rp'))append('Заменён фильтр',tr.dataset.filterName||g(id+'_name'));
     });
   });
-  WORKS.forEach(([group,label],i)=>{if(workAllowed(group)&&gc('job_'+i)&&/^Замена\b|^Замена /u.test(label))append('Замена',label);});
   for(let i=1;i<=workCount;i++)if(gc('wk_'+i))append('Работы и замены',[g('wn_'+i),g('wa_'+i),g('wc_'+i)].filter(Boolean).join(' · '));
   return result;
 }
@@ -1507,7 +1535,7 @@ function appendNotesPages(C,title,items){
 function appendProjectorNotes(C,h){
   const f=h.fields||{};
   appendNotesPages(C,'Неисправности, замены и примечания',[
-    ['Неисправности',f.hall_faults],['Замены',f.hall_replacements],['Примечания',f.hall_notes],
+    ['Неисправности',f.hall_faults],['Примечания',hallNotesText(f)],
     ...(h.importNotes||[]).map(n=>['Примечание из добавленного акта',n])
   ].filter(([,v])=>v?.trim()));
 }
@@ -1515,11 +1543,12 @@ function appendSummary(C,h,i){
   const f=h.fields||{};
   const row=(label,b,a)=>'<tr><td>'+esc(label)+'</td><td>'+esc(String(b??'').trim()||'нет данных')+'</td><td>'+esc(String(a??'').trim()||'нет данных')+'</td></tr>';
   const table=(heading,unit,rows)=>'<div><div class="pdf-col-title">'+heading+'</div><table class="pdf-table"><thead><tr><th>Параметр</th><th>До, '+unit+'</th><th>После, '+unit+'</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
-  const light=IMG_PARAMS.slice(0,4).map((p,j)=>row(p.name,f['mv_imgTable_'+j+'_b'],f['mv_imgTable_'+j+'_a'])).join('');
+  const light=IMG_PARAMS.slice(0,4).map((p,j)=>p.only3D&&!has3D()?'':row(p.name,f['mv_imgTable_'+j+'_b'],f['mv_imgTable_'+j+'_a'])).join('');
   const audio=AUDIO_CHANNELS.map(ch=>row(ch.name,f['ach_'+ch.id+'_b'],f['ach_'+ch.id+'_a'])).join('');
   const notes=summaryNotes(h);
   if(!notes.length)notes.push(['Неисправности, замены и примечания','Нет данных']);
-  const intro='<div class="pdf-two-col">'+table('Яркость','фут-ламберт',light)+table('Звук','дБ',audio)+'</div>';
+  const info=has3D()?'<div class="pdf-info-grid">'+[['Модель 3D-системы',f.f_3d],['Серийный номер 3D-системы',f.f_3dsn]].map(([label,value])=>'<div class="pdf-info-cell"><div class="pdf-info-label">'+esc(label)+'</div><div class="pdf-info-value">'+esc(value||'—')+'</div></div>').join('')+'</div>':'';
+  const intro=info+'<div class="pdf-two-col">'+table('Яркость','фут-ламберт',light)+table('Звук','дБ',audio)+'</div>';
   const inline=notes.length<=4&&notes.every(([,v])=>v.length<=120&&!v.includes('\n'));
   C.insertAdjacentHTML('beforeend',pdfPage('',projectorLabel(h,i),intro+(inline?notesMarkup(notes):'')));
   if(!inline)appendNotesPages(C,'Сводка · неисправности, замены и примечания',notes);
@@ -1675,7 +1704,7 @@ async function exportPDF(mode='full'){
 // ═══════════════════════════════════════════════════════════
 async function init(){
   document.getElementById('pdfPages').replaceChildren();
-  document.getElementById('workChecks').innerHTML=WORKS.map(([group,label],i)=>'<label data-work-group="'+group+'"><input type="checkbox" id="job_'+i+'">'+esc(label)+'</label>').join('');
+  document.getElementById('workChecks').innerHTML=WORKS.flatMap(([group,label],i)=>label?['<label data-work-group="'+group+'"><input type="checkbox" id="job_'+i+'">'+esc(label)+'</label>']:[]).join('');
   buildAvTable();
   buildImgTable();
   buildAudioChannels();
