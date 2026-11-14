@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-report-version="2" data-release="2.4">
+<html lang="ru" data-report-version="2" data-release="2.4.1">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="Отчёт ТО"/>
 <meta name="theme-color" content="#0F1C2E"/>
-<title>Акт ТО ЦКП · 2.4</title>
+<title>Акт ТО ЦКП · 2.4.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -353,7 +353,7 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 .section-card .nav-btns .btn-ghost{grid-column:1;color:#23465C}
 .section-card .nav-btns .btn-primary{grid-column:2}
 .pdf-work-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
-.pdf-work-columns td{overflow-wrap:anywhere}
+.pdf-work-columns td,.pdf-work-table td,.pdf-work-filters td{overflow-wrap:anywhere}
 .pdf-table .work-number{width:42px;min-width:42px;box-sizing:border-box;white-space:nowrap;overflow-wrap:normal;text-align:center}
 .pdf-table td.work-number{font-weight:700;color:#007A8A}
 
@@ -1636,15 +1636,31 @@ function buildHallPDFPages(){
   const hasArticle=rows.some(r=>r[1].trim()),hasResult=rows.some(r=>r[2].trim());
   const twoColumns=!hasArticle&&!hasResult&&![g('hall_faults'),g('hall_notes'),...(halls[hallIndex].importNotes||[])].some(v=>v.trim());
   const workPageSize=twoColumns?24:16;
-  const workPages=Math.max(1,Math.ceil(rows.length/workPageSize));
-  for(let p=0;p<workPages;p++){
-    const offset=p*workPageSize,slice=rows.slice(offset,offset+workPageSize),mid=Math.ceil(slice.length/2);
-    const layout=twoColumns&&slice.length>1?'<div class="pdf-work-columns">'+pdfWorksTable(slice.slice(0,mid),offset,false,false)+pdfWorksTable(slice.slice(mid),offset+mid,false,false)+'</div>':pdfWorksTable(slice,offset,hasArticle,hasResult);
-    C.innerHTML+=pdfPage(String(6+p),'Выполненные работы и замены деталей',layout);
-  }
-  for(let i=0;i<filters.length;i+=16){
-    C.innerHTML+=pdfPage('','Воздушные фильтры',`<table class="pdf-table"><thead><tr><th>Фильтр</th><th>Статус</th></tr></thead><tbody>${filters.slice(i,i+16).map(([name,status])=>`<tr><td>${esc(name)}</td><td>${esc(status)}</td></tr>`).join('')}</tbody></table>`);
-  }
+  let workOffset=0,filterOffset=0,workPages=0;
+  do{
+    let workCountOnPage=Math.min(workPageSize,rows.length-workOffset);
+    let filterCountOnPage=Math.min(16,filters.length-filterOffset);
+    const title=workPages?'Выполненные работы и замены деталей · продолжение':'Выполненные работы и замены деталей';
+    const render=()=>{
+      const slice=rows.slice(workOffset,workOffset+workCountOnPage),mid=Math.ceil(slice.length/2);
+      const work=(twoColumns&&slice.length>1
+        ?'<div class="pdf-work-columns">'+pdfWorksTable(slice.slice(0,mid),workOffset,false,false)+pdfWorksTable(slice.slice(mid),workOffset+mid,false,false)+'</div>'
+        :(slice.length||workPages===0)?pdfWorksTable(slice,workOffset,hasArticle,hasResult):'');
+      const filter=pdfFiltersTable(filters.slice(filterOffset,filterOffset+filterCountOnPage));
+      return pdfPage(String(6+workPages),title,work+filter);
+    };
+    C.insertAdjacentHTML('beforeend',render());
+    // Match the fixed height used by html2canvas instead of cutting off tall tables.
+    while(C.lastElementChild.offsetHeight>794){
+      if(workCountOnPage>1)workCountOnPage--;
+      else if(filterCountOnPage>1||(filterCountOnPage===1&&workCountOnPage===1))filterCountOnPage--;
+      else break;
+      C.lastElementChild.outerHTML=render();
+    }
+    workOffset+=workCountOnPage;
+    filterOffset+=filterCountOnPage;
+    workPages++;
+  }while(workOffset<rows.length||filterOffset<filters.length);
 
   // PHOTO SHELL PAGES — actual photos are overlaid in exportPDF() at native resolution
   const photoPages=[];
@@ -1661,9 +1677,14 @@ function buildHallPDFPages(){
     C.innerHTML+=pdfPage(String(7+workPages+i),title,`<div data-photo-page="${offset+i}" style="flex:1;min-height:560px;background:#F8FAFB;border-radius:6px;">${items.length?items.map((ph,j)=>`<div style="position:absolute;left:${(7+(j%2)*143.5+1)/297*1122}px;top:${(33+Math.floor(j/2)*86.5+77.5+1)/210*794}px;font-size:10px;color:#64748B;max-width:510px;overflow:hidden;white-space:nowrap">${esc(ph.caption||'')}</div>`).join(''):'<div style="padding:40px;text-align:center;color:#94A3B8;font-size:13px">Фотографии не загружены</div>'}</div>`);
   });
 }
+function pdfFiltersTable(rows){
+  if(!rows.length)return '';
+  return '<div class="pdf-work-filters"><div class="pdf-col-title">Воздушные фильтры</div><table class="pdf-table"><thead><tr><th>Фильтр</th><th>Статус</th></tr></thead><tbody>'+
+    rows.map(([name,status])=>'<tr><td>'+esc(name)+'</td><td>'+esc(status)+'</td></tr>').join('')+'</tbody></table></div>';
+}
 function pdfWorksTable(rows,offset,hasArticle,hasResult){
   const heads=['Наименование работы / детали',...(hasArticle?['Артикул / С/н']:[]),...(hasResult?['Результат / Примечание']:[])];
-  return '<table class="pdf-table"><thead><tr><th class="work-number">№</th>'+heads.map(t=>'<th>'+esc(t)+'</th>').join('')+'</tr></thead><tbody>'+
+  return '<table class="pdf-table pdf-work-table"><thead><tr><th class="work-number">№</th>'+heads.map(t=>'<th>'+esc(t)+'</th>').join('')+'</tr></thead><tbody>'+
     (rows.map(([name,article,result],i)=>'<tr><td class="work-number">'+(offset+i+1)+'</td>'+[name,...(hasArticle?[article]:[]),...(hasResult?[result]:[])].map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>').join('')||
     '<tr><td colspan="'+(heads.length+1)+'" style="text-align:center;color:#94A3B8;padding:16px">Работы не отмечены</td></tr>')+'</tbody></table>';
 }
