@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-report-version="2" data-release="2.4.3">
+<html lang="ru" data-report-version="2" data-release="2.5.0">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="Отчёт ТО"/>
 <meta name="theme-color" content="#0F1C2E"/>
-<title>Акт ТО ЦКП · 2.4.3</title>
+<title>Акт ТО ЦКП · 2.5.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -369,6 +369,17 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 .pdf-table .work-number{width:42px;min-width:42px;box-sizing:border-box;white-space:nowrap;overflow-wrap:normal;text-align:center}
 .pdf-table td.work-number{font-weight:700;color:#007A8A}
 
+#reportHome[hidden],#reportEditor[hidden],#homeActions[hidden],#stepsNav[hidden],.progress-bar[hidden],#backupActions[hidden]{display:none!important}
+.archive-home{display:block;max-width:660px;margin:0 auto}
+.archive-home .sec-body{display:grid;gap:12px}
+.archive-home h2{font-size:18px}.archive-home select{width:100%}
+.archive-home .module-actions{margin:0}.archive-home .btn:disabled{opacity:.55;cursor:default}
+.archive-note{font-size:13px;color:var(--text3);line-height:1.45}
+#homeActions{max-width:1080px;margin:auto;padding:5px 14px 6px;display:flex;gap:6px 9px;align-items:center;flex-wrap:wrap}
+#homeActions .btn{min-height:32px;padding:5px 9px;font-size:12px}
+#homeActions button{background:#20374E;color:#fff;border-color:#6D8195}
+#saveState{color:#EDF6FD;font-size:12px;margin-left:auto}#saveState.save-error{color:#FFB3A6;font-weight:700}
+#saveState:not(.save-error)~#retrySave,#saveState:not(.save-error)~#editorBackup{display:none}
 </style>
 </head>
 <body>
@@ -383,16 +394,44 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
     </div>
   </div>
   <div class="top-actions">
-    <button class="btn btn-ghost hide-mobile" onclick="resetForm()">↺</button>
+
     
   </div>
 </div>
 
+<div id="homeActions" hidden>
+  <button class="btn btn-ghost" id="backToHome" type="button">← К отчётам</button>
+  <span id="saveState" role="status" aria-live="polite"></span>
+  <button class="btn btn-ghost" id="retrySave" type="button">Повторить</button>
+  <button class="btn btn-ghost" id="editorBackup" type="button">Копия JSON</button>
+</div>
 <!-- ═══ STEPS ═══ -->
-<div class="steps-nav wizard-status" id="stepsNav" aria-label="Ход заполнения"></div>
-<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:14%"></div></div></header>
+<div class="steps-nav wizard-status" id="stepsNav" hidden aria-label="Ход заполнения"></div>
+<div class="progress-bar" hidden><div class="progress-fill" id="progressFill" style="width:14%"></div></div></header>
 
 <div class="main">
+<section class="section-card active archive-home" id="reportHome" aria-labelledby="archiveTitle">
+  <div class="sec-header"><h2 class="sec-title" id="archiveTitle">Отчёты ТО</h2><span class="sec-title">2.5.0</span></div>
+  <div class="sec-body">
+    <div class="module-actions"><button class="btn btn-primary" type="button" id="newReport" disabled>Новый отчёт</button>
+      <button class="btn btn-ghost" type="button" id="resumeReport" disabled>Продолжить последний</button></div>
+    <div class="field"><label for="historyReports">История отчётов</label>
+      <select id="historyReports" disabled><option value="">Загрузка истории…</option></select></div>
+    <div class="module-actions">
+      <button class="btn btn-primary" type="button" id="openHistory" disabled>Редактировать отчёт</button>
+      <button class="btn btn-ghost" type="button" id="prepareBackup" disabled>Резервная копия JSON</button>
+      <button class="btn btn-ghost" type="button" id="importBackup" disabled>Загрузить копию</button>
+      <input id="archiveFile" type="file" accept=".json,.html,.htm,application/json,text/html" hidden>
+    </div>
+    <div class="module-actions" id="backupActions" hidden>
+      <button class="btn btn-primary" type="button" id="downloadBackup">Скачать JSON</button>
+      <button class="btn btn-ghost" type="button" id="shareBackup">Поделиться JSON</button>
+    </div>
+    <p class="archive-note">Отчёты с фото сохраняются в этом приложении на устройстве. Для отдельной копии сохрани JSON в «Файлы» или отправь его.</p>
+    <p class="archive-note" id="historyStatus" role="status"></p>
+  </div>
+</section>
+<div id="reportEditor" hidden>
 
 <!-- ════ 1. ОБЩИЕ СВЕДЕНИЯ ════ -->
 <div class="section-card active" id="welcome">
@@ -565,6 +604,7 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 <div class="section-card" id="sec6">
   <div class="sec-header"><div class="sec-badge">7</div><div class="sec-title">Примечания, рекомендации и подписи сторон</div></div>
   <div class="sec-body">
+    <div class="module-actions"><button class="btn btn-ghost" type="button" onclick="shareReport()">Сохранить копию JSON</button><p class="archive-note">После фотосъёмки сохрани отдельную копию отчёта с фото в «Файлы» или отправь её.</p></div>
     <div class="notes-grid">
       <div class="field"><label>Примечания и рекомендации</label><textarea id="f_notes" rows="5" placeholder="Замечания, рекомендации по следующему ТО…"></textarea></div>
       <div class="field"><label>Дополнительная информация</label><textarea id="f_notes2" rows="5" placeholder="Любая доп. информация…"></textarea></div>
@@ -621,6 +661,7 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
   </div>
   <div class="nav-btns"><button class="btn btn-ghost" onclick="goStep(7)">← Назад</button><div class="step-info"></div></div>
 </div>
+</div><!-- /reportEditor -->
 </div><!-- /main -->
 
 <dialog id="batchCamera" aria-labelledby="cameraTitle">
@@ -730,7 +771,7 @@ function goStep(n){
   }
   currentStep=n;
   const active=document.getElementById(stepCards[n]);
-  document.querySelectorAll('.section-card').forEach(c=>c.classList.toggle('active',c===active));
+  document.querySelectorAll('#reportEditor .section-card').forEach(c=>c.classList.toggle('active',c===active));
   active.querySelector('.sec-badge').textContent=n+1;
   active.querySelector('.step-info').textContent='Шаг '+(n+1)+' / '+stepCards.length;
   if(n===8)renderReportOptions();
@@ -739,6 +780,7 @@ function goStep(n){
   if(n===5||n===6){document.getElementById('photoTitle').textContent=stepLabels[n];renderGallery();}
   if(n===7)renderEngineers();
   window.scrollTo({top:0,behavior:'instant'});
+  markReportChanged(true);
 }
 function renderNavigation(){
   const nav=document.getElementById('stepsNav');
@@ -912,10 +954,15 @@ let swScreenshots=[];
 
 async function addSwScreenshots(files){
   const target=swScreenshots;
-  const results=await Promise.allSettled(Array.from(files).map(imageData));
-  results.forEach(r=>{if(r.status==='fulfilled')target.push(r.value);});
-  if(swScreenshots===target)renderSwGallery();
-  if(results.some(r=>r.status==='rejected'))showToast('Не удалось добавить часть изображений');
+  let failed=0;pendingImages++;
+  try{
+    for(const file of Array.from(files)){
+      try{const src=await imageData(file);target.push(src);markReportChanged(true);}
+      catch{failed++;}
+      if(swScreenshots===target)renderSwGallery();
+    }
+  }finally{pendingImages--;}
+  if(failed)showToast('Не удалось добавить часть изображений');
 }
 function addSwScreenshotFromBlob(blob){return addSwScreenshots([blob]);}
 function removeSwScreenshot(i){
@@ -979,10 +1026,14 @@ async function imageData(file){
 }
 async function addPhotosFromFiles(files){
   const target=captureTarget();
-  const results=await Promise.allSettled(Array.from(files).map(imageData));
-  results.forEach(r=>{if(r.status==='fulfilled')target.photos.push({src:r.value,caption:'',category:target.category});});
-  if(photos===target.photos)renderGallery();
-  const failed=results.filter(r=>r.status==='rejected').length;
+  let failed=0;pendingImages++;
+  try{
+    for(const file of Array.from(files)){
+      try{const src=await imageData(file);target.photos.push({src,caption:'',category:target.category});markReportChanged(true);}
+      catch{failed++;}
+      if(photos===target.photos)renderGallery();
+    }
+  }finally{pendingImages--;}
   if(failed)showToast('Не удалось добавить фото: '+failed+'. Попробуйте JPEG или PNG.');
 }
 function addPhotoFromBlob(blob){return addPhotosFromFiles([blob]);}
@@ -1050,7 +1101,7 @@ function takeBatchPhoto(){
   c.width=Math.round(video.videoWidth*ratio);c.height=Math.round(video.videoHeight*ratio);
   c.getContext('2d').drawImage(video,0,0,c.width,c.height);
   cameraSession.photos.push({src:c.toDataURL('image/jpeg',.88),caption:'',category:cameraSession.category});
-  renderGallery();
+  markReportChanged(true);
   document.getElementById('cameraCount').textContent='Снимков за эту серию: '+(++cameraShots);
 }
 function stopBatchCamera(){
@@ -1061,7 +1112,7 @@ function stopBatchCamera(){
 function closeBatchCamera(){stopBatchCamera();document.getElementById('batchCamera').close();}
 function useNativeCamera(){closeBatchCamera();document.getElementById('photoCamera').click();}
 document.getElementById('batchCamera').addEventListener('cancel',stopBatchCamera);
-document.getElementById('batchCamera').addEventListener('close',e=>{if(!e.target.open&&cameraSession)stopBatchCamera();});
+document.getElementById('batchCamera').addEventListener('close',e=>{if(!e.target.open){if(cameraSession)stopBatchCamera();renderGallery();}});
 window.addEventListener('pagehide',stopBatchCamera);
 function removePhoto(i){
   photos.splice(i,1);
@@ -1105,7 +1156,7 @@ function renderGallery(){
       if(dragSrcIdx===null||dragSrcIdx===targetIdx) return;
       const moved=photos.splice(dragSrcIdx,1)[0];
       photos.splice(targetIdx,0,moved);
-      dragSrcIdx=null;
+      dragSrcIdx=null;markReportChanged(true);
       renderGallery();
     });
     // touch sort (simple up/down buttons fallback via long-press)
@@ -1162,8 +1213,10 @@ const detailSlots=[['fl_before','Яркость до ТО'],['fl_after','Ярк�
 async function readDetailPhoto(input,key){
   const file=input.files[0];if(!file)return;
   const target=detailPhotos;
-  try{const image=await imageData(file);target[key]=union(detailImages(target[key]),[image]);if(target===detailPhotos)renderDetailPhotos();}
+  pendingImages++;
+  try{const image=await imageData(file);target[key]=union(detailImages(target[key]),[image]);markReportChanged(true);if(target===detailPhotos)renderDetailPhotos();}
   catch(e){showToast(e.message);}
+  finally{pendingImages--;}
 }
 function renderDetailPhotos(){
   detailSlots.forEach(([key])=>{
@@ -1284,7 +1337,7 @@ function renderReportOptions(){
 const isObj=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
 const record=(x,accept)=>Object.fromEntries(Object.entries(isObj(x)?x:{}).filter(([k,v])=>!['__proto__','constructor','prototype'].includes(k)&&accept(k,v)));
 const safeImage=x=>typeof x==='string'&&/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/i.test(x);
-function validateImport(data){
+function validateImport(data,allowIncomplete=false){
   if(!isObj(data)||![2,3].includes(data.version)||!Array.isArray(data.halls)||!data.halls.length||data.halls.length>300)throw new Error('Выбери файл данных ТО или заполненный HTML этой формы.');
   const shared=record(data.shared,(k,v)=>sharedIds.includes(k)&&typeof v==='string');
   const imported=data.halls.map(h=>{
@@ -1299,9 +1352,9 @@ function validateImport(data){
       detailPhotos:record(h.detailPhotos,(k,v)=>detailSlots.some(([id])=>id===k)&&(safeImage(v)||Array.isArray(v)&&v.every(safeImage))),
       mergeConflicts:validMergeConflicts(h.mergeConflicts),
       importNotes:Array.isArray(h.importNotes)?h.importNotes.filter(v=>typeof v==='string'):[]};
-  }).filter(h=>h.fields.f_hall||h.fields.f_brand||h.fields.f_projsn||h.photos.length);
+  }).filter(h=>allowIncomplete||h.fields.f_hall||h.fields.f_brand||h.fields.f_projsn||h.photos.length);
   if(!imported.length)throw new Error('В файле нет заполненных залов или проекторов.');
-  const people=Array.isArray(data.engineers)?data.engineers.filter(e=>isObj(e)&&typeof e.name==='string'&&e.name.trim()).map(e=>({name:e.name,date:typeof e.date==='string'?e.date:'',sign:typeof e.sign==='string'?e.sign:''})):[];
+  const people=Array.isArray(data.engineers)?data.engineers.filter(e=>isObj(e)&&typeof e.name==='string'&&(allowIncomplete||e.name.trim())).map(e=>({name:e.name,date:typeof e.date==='string'?e.date:'',sign:typeof e.sign==='string'?e.sign:''})):[];
   return {shared,halls:imported,engineers:people};
 }
 function downloadData(file){
@@ -1309,8 +1362,7 @@ function downloadData(file){
   a.href=url;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
 async function shareReport(){
-  const data=reportData();
-  const file=new File([JSON.stringify(data)],'Данные_ТО_'+(g('f_date')||localDate())+'.json',{type:'application/json'});
+  const file=editorBackupFile({...reportData(),step:currentStep});
   if(navigator.canShare?.({files:[file]})){
     try{await navigator.share({files:[file],title:'Данные акта ТО'});return;}
     catch(e){if(e.name==='AbortError')return;}
@@ -1523,7 +1575,7 @@ function mergeImport(){
   halls=next;hallIndex=first;engineers=people;
   for(const [k,v] of Object.entries(sharedWrites))document.getElementById(k).value=v;
   restoreHall();renderEngineers();clearImport();mergePlan=null;renderNavigation();renderReportOptions();
-  showToast('Импорт применён. Сохрани черновик, чтобы оставить результат на телефоне.');
+  markReportChanged(true);showToast('Импорт применён');
 }
 function appendMergePDF(C,h){
   const rows=validMergeConflicts(h.mergeConflicts);
@@ -1543,20 +1595,273 @@ function draftStore(mode,action){
   });
 }
 async function saveDraft(){
-  try{
-    const data=reportData();await draftStore('readwrite',store=>store.put(data,'current'));
-    showToast('Черновик сохранён');
-  }catch{showToast('Не удалось сохранить черновик. Скачайте заполненный HTML.');}
+  if(!editingId)return;
+  dirty=true;saveRevision++;
+  if(await flushReport()&&!dirty)showToast('Отчёт сохранён на iPhone');
+  else showToast('Не удалось сохранить. Попробуй ещё раз или сохрани копию JSON.');
 }
-async function resetForm(){
-  if(!confirm('Очистить весь акт и все залы?'))return;
+// Each report owns its metadata and image keys. Existing image bytes are not
+// rewritten by edits. Metadata and image changes commit in one transaction.
+const $=id=>document.getElementById(id);
+const archiveLegacyId='legacy-current';
+let archiveDb,editingId=null,editingSince=0,imageKeys=new Map(),loadingEditor=false,archiveBusy=false;
+let saveTimer=0,dirtySince=0,dirty=false,saveRevision=0,pendingWrites=0,pendingImages=0,reportAction=0;
+let backupFile=null,archiveListReady=false;
+function connectArchive(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open('cto_report_archive',1);
+    req.onupgradeneeded=()=>['reports','images','catalog'].forEach(n=>req.result.createObjectStore(n));
+    req.onerror=()=>reject(req.error);
+    req.onblocked=()=>reject(new Error('Закрой другие окна приложения и открой его снова.'));
+    req.onsuccess=()=>{archiveDb=req.result;archiveDb.onversionchange=()=>{archiveDb.close();archiveDb=null;};resolve();};
+  });
+}
+function archiveTx(names,mode,run){
+  return new Promise((resolve,reject)=>{
+    if(!archiveDb){reject(new Error('Хранилище недоступно'));return;}
+    const tx=archiveDb.transaction(names,mode);
+    let result;
+    tx.oncomplete=()=>resolve(result);
+    tx.onabort=()=>reject(tx.error||new Error('Запись прервана'));
+    try{run(tx,value=>{result=value;});}catch(e){tx.abort();reject(e);}
+  });
+}
+function mapReportImages(data,map){
+  return {...data,halls:data.halls.map(h=>({...h,
+    photos:(h.photos||[]).map(p=>({...p,src:map(p.src)})),
+    swScreenshots:(h.swScreenshots||[]).map(map),
+    detailPhotos:Object.fromEntries(Object.entries(h.detailPhotos||{}).map(([k,v])=>[k,detailImages(v).map(map)]))
+  }))};
+}
+function persistReport(id,since,raw,keys){
+  const sources=new Map();
+  const data=mapReportImages(raw,src=>{
+    if(!src)return '';
+    let k=keys.get(src);if(!k){k=newProjectorId();keys.set(src,k);}
+    sources.set(k,src);return k;
+  });
+  const refs=[...sources.keys()];
+  const entry={id,since,updated:Date.now(),date:raw.shared?.f_date||'',cinema:raw.shared?.f_cinema||'',
+    city:raw.shared?.f_city||'',halls:raw.halls.map(h=>h.fields?.f_hall||'').filter(Boolean)};
+  return archiveTx(['reports','images','catalog'],'readwrite',tx=>{
+    const reports=tx.objectStore('reports'), images=tx.objectStore('images');
+    reports.get(id).onsuccess=e=>{
+      const old=new Set(e.target.result?.refs||[]);
+      for(const [k,src] of sources)if(!old.has(k))images.put(src,[id,k]);
+      for(const k of old)if(!sources.has(k))images.delete([id,k]);
+      reports.put({data,refs},id);
+      tx.objectStore('catalog').put(entry,id);
+    };
+  }).then(()=>{for(const [src,key] of keys)if(!sources.has(key)&&pendingWrites<=1)keys.delete(src);});
+}
+function getArchiveEntry(id){
+  return archiveTx(['catalog'],'readonly',(tx,set)=>{tx.objectStore('catalog').get(id).onsuccess=e=>set(e.target.result);});
+}
+function readArchiveReport(id){
+  return archiveTx(['reports','images'],'readonly',(tx,set)=>{
+    tx.objectStore('reports').get(id).onsuccess=e=>{
+      const row=e.target.result;
+      const all=new Map();
+      if(!row){set(null);return;}
+      let left=row.refs.length;
+      const finish=()=>set([...all.values()].some(v=>typeof v!=='string')?null:{
+        data:mapReportImages(row.data,k=>all.get(k)||''),
+        keys:new Map([...all].map(([k,v])=>[v,k]))
+      });
+      if(!left){finish();return;}
+      const imageStore=tx.objectStore('images');
+      for(const k of row.refs)imageStore.get([id,k]).onsuccess=ev=>{all.set(k,ev.target.result);if(!--left)finish();};
+    };
+  });
+}
+function saveMessage(message,error=false){
+  $('saveState').textContent=message;
+  $('saveState').classList.toggle('save-error',error);
+}
+function markReportChanged(now=false){
+  if(!editingId||loadingEditor)return;
+  dirty=true;saveRevision++;
+  dirtySince=dirtySince||Date.now();
+  saveMessage('Сохраняется…');
+  clearTimeout(saveTimer);
+  if(now)void flushReport();
+  else saveTimer=setTimeout(flushReport,Math.max(0,Math.min(450,1600-(Date.now()-dirtySince))));
+}
+let latestWrite=Promise.resolve(true);
+function flushReport(){
+  clearTimeout(saveTimer);
+  if(!editingId||loadingEditor||!dirty)return latestWrite;
+  const id=editingId,revision=saveRevision;
+  dirty=false;dirtySince=0;pendingWrites++;
+  saveMessage('Сохраняется…');
+  latestWrite=(async()=>{
+    try{
+      await persistReport(id,editingSince,{...reportData(),step:currentStep},imageKeys);
+      if(editingId===id&&saveRevision===revision&&!dirty)saveMessage('Сохранено на iPhone');
+      return true;
+    }catch(e){
+      if(editingId===id&&saveRevision===revision){
+        dirty=true;
+        saveMessage('Не сохранено. Повтори запись или сохрани копию JSON.',true);
+      }
+      return false;
+    }finally{pendingWrites--;}
+  })();
+  return latestWrite;
+}
+function editorBackupFile(data){
+  const name=String(data.shared?.f_cinema||'КТ').replace(/[<>:"/\\|?*]/g,'').trim().slice(0,35);
+  return new File([JSON.stringify(data)],'Отчёт_ТО_'+name+'_'+(data.shared?.f_date||localDate())+'.json',{type:'application/json'});
+}
+async function shareBackup(file){
+  if(navigator.canShare?.({files:[file]})){
+    try{await navigator.share({files:[file],title:'Данные акта ТО'});return;}
+    catch(e){if(e.name==='AbortError')return;}
+  }
+  downloadData(file);
+}
+function resetBackup(){
+  backupFile=null;$('backupActions').hidden=true;$('prepareBackup').textContent='Резервная копия JSON';
+}
+function archiveSelection(){
+  const disabled=!$('historyReports').value||archiveBusy;
+  $('openHistory').disabled=disabled;$('prepareBackup').disabled=disabled;
+  resetBackup();
+}
+function archiveControls(){
+  $('newReport').disabled=archiveBusy||!archiveListReady;
+  $('resumeReport').disabled=archiveBusy||!$('resumeReport').dataset.id;
+  $('importBackup').disabled=archiveBusy||!archiveListReady;
+  $('historyReports').disabled=archiveBusy||$('historyReports').options.length<2;
+  archiveSelection();
+}
+async function showReportHome(selected){
+  $('reportEditor').hidden=true;$('homeActions').hidden=true;
+  $('stepsNav').hidden=true;$('progressFill').parentElement.hidden=true;
+  $('reportHome').hidden=false;
+  window.scrollTo(0,0);
+  const entries=await archiveTx(['catalog'],'readonly',(tx,set)=>{tx.objectStore('catalog').getAll().onsuccess=e=>set(e.target.result);});
+  entries.sort((a,b)=>b.updated-a.updated);
+  const sel=$('historyReports');
+  sel.replaceChildren(new Option(entries.length?'Выберите отчёт':'Сохранённых отчётов пока нет',''));
+  for(const entry of entries){
+    const date=new Date(entry.updated).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    sel.add(new Option([entry.cinema||'Без названия',entry.city,entry.date,entry.halls.length&&'залы '+entry.halls.join(', '),'изм. '+date].filter(Boolean).join(' · '),entry.id));
+  }
+  if(entries.some(e=>e.id===selected))sel.value=selected;
+  $('resumeReport').dataset.id=entries[0]?.id||'';
+  archiveListReady=true;archiveControls();
+}
+function enterReport(id,data,since,keys=new Map()){
+  loadingEditor=true;
   try{
-    await draftStore('readwrite',store=>store.delete('current'));
-    ['cto_v5','cto_v5_photos','cto_v5_swshots'].forEach(k=>localStorage.removeItem(k));
-    if(document.getElementById('__preload__')){
-      applyReport({version:2,halls:[{}],engineers:[{name:'',date:'',sign:''}],shared:Object.fromEntries(sharedIds.map(id=>[id,id==='f_date'?localDate():'']))});goStep(0);
-    }else location.reload();
-  }catch{showToast('Не удалось удалить черновик');}
+    editingId=id;editingSince=since||Date.now();imageKeys=keys;
+    dirty=false;dirtySince=0;saveRevision++;latestWrite=Promise.resolve(true);
+    clearImport();mergePlan=null;
+    $('pdfDownloads').replaceChildren();$('pdfDownloads').hidden=true;
+    $('reportHome').hidden=true;$('reportEditor').hidden=false;$('homeActions').hidden=false;
+    $('stepsNav').hidden=false;$('progressFill').parentElement.hidden=false;
+    const blank={version:3,halls:[{}],engineers:[{name:'',date:'',sign:''}],
+      shared:Object.fromEntries(sharedIds.map(k=>[k,k==='f_date'?localDate():'']))};
+    applyReport(blank);
+    if(data)applyReport(data);
+    if(data?.unlocked&&!['f_date','f_city','f_cinema','f_address'].some(k=>!g(k))&&engineers.some(e=>e.name.trim()))unlocked=true;
+    goStep(Number.isInteger(data?.step)&&data.step>=0&&data.step<stepCards.length?data.step:0);
+    saveMessage(archiveDb&&data?'Сохранено на iPhone':'');
+  }finally{loadingEditor=false;}
+}
+async function runArchiveAction(run){
+  if(archiveBusy)return;
+  archiveBusy=true;archiveControls();
+  try{await run();}
+  catch(e){$('historyStatus').textContent=e.message||'Не удалось выполнить действие с архивом.';showToast($('historyStatus').textContent);}
+  finally{archiveBusy=false;archiveControls();}
+}
+async function openSavedReport(id){
+  if(!id)return;
+  return runArchiveAction(async()=>{
+    const row=await readArchiveReport(id), entry=await getArchiveEntry(id);
+    if(!row||!entry)throw new Error('Не удалось прочитать отчёт и фотографии.');
+    enterReport(id,row.data,entry.since,row.keys);
+  });
+}
+async function goReportHome(){
+  if(archiveBusy)return;
+  if(pendingImages){showToast('Подожди, пока добавятся фотографии');return;}
+  return runArchiveAction(async()=>{
+    const saved=await flushReport();
+    if(!saved||dirty||pendingImages){showToast('Отчёт ещё не сохранён. Попробуй снова или скачай JSON.');return;}
+    const id=editingId;editingId=null;imageKeys=new Map();
+    await showReportHome(id);
+  });
+}
+async function prepareArchiveBackup(){
+  const id=$('historyReports').value;
+  if(!id)return;
+  const ticket=++reportAction;
+  $('prepareBackup').disabled=true;
+  $('historyStatus').textContent='Готовим JSON с фотографиями…';
+  try{
+    const row=await readArchiveReport(id);
+    if(ticket!==reportAction||id!==$('historyReports').value)return;
+    if(!row)throw new Error('Не удалось прочитать фотографии отчёта.');
+    backupFile=editorBackupFile(row.data);
+    $('backupActions').hidden=false;
+    $('historyStatus').textContent='Копия готова. Скачай её или выбери «Поделиться».';
+  }catch(e){if(ticket===reportAction)$('historyStatus').textContent=e.message;}
+  finally{if(ticket===reportAction)$('prepareBackup').disabled=!$('historyReports').value||archiveBusy;}
+}
+async function migrateLegacyDraft(){
+  if(await getArchiveEntry(archiveLegacyId))return;
+  let data=await draftStore('readonly',store=>store.get('current'));
+  if(!data){
+    const fields=JSON.parse(localStorage.getItem('cto_v5')||'null');
+    if(fields)data=legacyReport({fields,photos:JSON.parse(localStorage.getItem('cto_v5_photos')||'[]'),swshots:JSON.parse(localStorage.getItem('cto_v5_swshots')||'[]')});
+  }
+  if(data)await persistReport(archiveLegacyId,Date.now(),[2,3].includes(data.version)?data:legacyReport(data),new Map());
+}
+async function importArchiveBackup(input){
+  const file=input.files?.[0];input.value='';
+  if(!file)return;
+  return runArchiveAction(async()=>{
+    if(file.size>150*1024*1024)throw new Error('Этот файл больше 150 МБ.');
+    let raw=await file.text();
+    if(/^\s*</.test(raw)){
+      const match=raw.match(/<script\b[^>]*\bid=["']__preload__["'][^>]*>([\s\S]*?)<\/script\s*>/i);
+      if(!match)throw new Error('В HTML нет сохранённых данных ТО.');
+      raw=match[1];
+    }
+    const inputData=JSON.parse(raw), data=validateImport(inputData,true);
+    const index=inputData.hallIndex;
+    const report={...data,version:3,hallIndex:Number.isInteger(index)&&data.halls[index]?index:0,unlocked:inputData.unlocked===true,step:inputData.step};
+    const id=newProjectorId();
+    await persistReport(id,Date.now(),report,new Map());
+    await showReportHome(id);
+    $('historyStatus').textContent='Копия добавлена отдельным отчётом.';
+  });
+}
+function installArchiveHandlers(){
+  const home=$('reportHome');
+  $('newReport').onclick=()=>runArchiveAction(async()=>{enterReport(newProjectorId());markReportChanged(true);await latestWrite;});
+  $('resumeReport').onclick=()=>openSavedReport($('resumeReport').dataset.id);
+  $('openHistory').onclick=()=>openSavedReport($('historyReports').value);
+  $('historyReports').onchange=()=>{reportAction++;$('historyStatus').textContent='';archiveSelection();};
+  $('prepareBackup').onclick=prepareArchiveBackup;
+  $('downloadBackup').onclick=()=>{if(backupFile)downloadData(backupFile);};
+  $('shareBackup').onclick=()=>{if(backupFile)void shareBackup(backupFile);};
+  $('importBackup').onclick=()=>$('archiveFile').click();
+  $('archiveFile').onchange=()=>importArchiveBackup($('archiveFile'));
+  $('backToHome').onclick=goReportHome;
+  $('retrySave').onclick=saveDraft;
+  $('editorBackup').onclick=shareReport;
+  const editor=$('reportEditor');
+  const edit=e=>{if(e.target.matches('input:not([type=file]),select,textarea')&&!e.target.closest('#secReport, #batchCamera'))markReportChanged();};
+  editor.addEventListener('input',edit);editor.addEventListener('change',edit);
+  editor.addEventListener('click',e=>{
+    if(e.target.closest('button')&&!e.target.closest('#secReport'))markReportChanged();
+  });
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')void flushReport();});
+  window.addEventListener('pagehide',()=>{void flushReport();});
 }
 function localDate(){
   const d=new Date();return new Date(d-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
@@ -2022,26 +2327,32 @@ async function init(){
     table.querySelectorAll('tbody tr').forEach(row=>[...row.cells].forEach((td,i)=>{if(i&&!td.dataset.mobileLabel)td.dataset.mobileLabel=headers[i]||'';}));
   });
   document.getElementById('f_date').value=localDate();
-  renderEngineers();restoreHall();goStep(0);
   document.getElementById('f_hall').addEventListener('change',renderNavigation);
+  installArchiveHandlers();
+  const preload=document.getElementById('__preload__');
+  if(preload){
+    try{enterReport(newProjectorId(),JSON.parse(preload.textContent));}
+    catch{showToast('Не удалось прочитать сохранённый отчёт');}
+  }
   try{
-    const preload=document.getElementById('__preload__');
-    let data=preload?JSON.parse(preload.textContent):null;
-    if(!data){
-      try{data=await draftStore('readonly',store=>store.get('current'));}catch{}
-      if(!data){
-        const fields=JSON.parse(localStorage.getItem('cto_v5')||'null');
-        if(fields)data=legacyReport({fields,photos:JSON.parse(localStorage.getItem('cto_v5_photos')||'[]'),swshots:JSON.parse(localStorage.getItem('cto_v5_swshots')||'[]')});
-      }
-    }
-    if(data){applyReport(data);goStep(0);}
-  }catch(e){console.warn(e);showToast('Не удалось загрузить сохранённый черновик');}
+    await connectArchive();
+    if(preload){if(editingId)markReportChanged(true);return;}
+    try{await migrateLegacyDraft();}
+    catch{$('historyStatus').textContent='Не удалось перенести прежний черновик. Исходная запись не удалена.';}
+    await showReportHome();
+  }catch{
+    $('historyStatus').textContent='Хранилище отчётов недоступно. Закрой приложение и открой снова.';
+    if(editingId)saveMessage('Не сохранено. Сохрани копию JSON.',true);
+  }
 }
 async function saveAsHTML(){
-  const preload=reportData();
+  const preload={...reportData(),step:currentStep};
   const preloadTag=`<script type="application/json" id="__preload__">${JSON.stringify(preload).replace(/</g,"\\u003c")}<\/script>`;
   const copy=document.documentElement.cloneNode(true);
   copy.querySelector('#__preload__')?.remove();
+  copy.querySelector('#historyReports').replaceChildren(new Option('Загрузка истории…',''));
+  copy.querySelector('#historyStatus').textContent='';
+  copy.querySelector('#backupActions').hidden=true;
   copy.querySelector('#importPreview').hidden=true;
   copy.querySelector('#pdfDownloads').replaceChildren();copy.querySelector('#pdfDownloads').hidden=true;
   copy.querySelector('#importDescription').textContent='';
