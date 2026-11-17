@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-report-version="2" data-release="2.5.0">
+<html lang="ru" data-report-version="2" data-release="2.5.1">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="Отчёт ТО"/>
 <meta name="theme-color" content="#0F1C2E"/>
-<title>Акт ТО ЦКП · 2.5.0</title>
+<title>Акт ТО ЦКП · 2.5.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -258,6 +258,9 @@ body{font-family:var(--font);background:#E8EEF4;color:var(--text);min-height:100
 .pdf-box{background:#fff;border-radius:16px;padding:28px 36px;text-align:center;box-shadow:0 20px 60px #0005;min-width:260px}
 .pdf-box strong{font-size:14px;color:var(--navy);font-weight:700}
 .pdf-box p{font-size:12px;color:var(--text3);margin:7px 0 0}
+#pdfProgress{display:block;width:100%;height:14px;margin:12px 0 2px;accent-color:var(--teal)}
+#pdfStatus{color:#9b2020;overflow-wrap:anywhere;margin-block:10px}
+#pdfSlow[hidden],#pdfStatus[hidden]{display:none}
 .spinner{width:38px;height:38px;border:3px solid var(--gray2);border-top-color:var(--teal);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;bottom:20px;right:16px;background:var(--navy);color:#fff;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;border-left:3px solid var(--teal);pointer-events:none}
@@ -375,9 +378,21 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 .archive-home h2{font-size:18px}.archive-home select{width:100%}
 .archive-home .module-actions{margin:0}.archive-home .btn:disabled{opacity:.55;cursor:default}
 .archive-note{font-size:13px;color:var(--text3);line-height:1.45}
-#homeActions{max-width:1080px;margin:auto;padding:5px 14px 6px;display:flex;gap:6px 9px;align-items:center;flex-wrap:wrap}
+#homeActions{background:var(--navy);max-width:1080px;margin:auto;padding:5px 14px 6px;display:flex;gap:6px 9px;align-items:center;flex-wrap:wrap}
 #homeActions .btn{min-height:32px;padding:5px 9px;font-size:12px}
 #homeActions button{background:#20374E;color:#fff;border-color:#6D8195}
+#homeActions #backToHome{background:#075767;border-color:#72b8c3;color:#fff}
+.btn.eng-add,.btn.eng-remove{min-height:44px;width:min(100%,220px);padding:8px 10px;font-size:13px;justify-content:center}
+.btn.eng-add{background:#daf4df;color:#18532a;border-color:#8dbd98}
+.btn.eng-remove{background:#fde2e2;color:#771e1e;border-color:#df9a9a}
+#batchCamera .camera-actions{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.camera-actions .btn{min-width:0;min-height:48px;padding:6px 3px;justify-content:center;white-space:normal;text-align:center}
+.camera-actions #cameraTorch{grid-column:1;grid-row:1}
+.camera-actions #cameraNative{grid-column:2;grid-row:1}
+.camera-actions #takePhoto{grid-column:3;grid-row:1}
+.camera-actions #cameraDone{grid-column:1/-1;justify-self:center;width:calc((200% - 8px)/3);min-height:52px;background:#12733c;border-color:#12733c;color:#fff}
+.engineer-directory-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px}
+.engineer-directory-row span{overflow-wrap:anywhere}
 #saveState{color:#EDF6FD;font-size:12px;margin-left:auto}#saveState.save-error{color:#FFB3A6;font-weight:700}
 #saveState:not(.save-error)~#retrySave,#saveState:not(.save-error)~#editorBackup{display:none}
 </style>
@@ -399,7 +414,7 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
   </div>
 </div>
 
-<div id="homeActions" hidden>
+<div id="homeActions" class="wizard-status" hidden>
   <button class="btn btn-ghost" id="backToHome" type="button">← К отчётам</button>
   <span id="saveState" role="status" aria-live="polite"></span>
   <button class="btn btn-ghost" id="retrySave" type="button">Повторить</button>
@@ -411,7 +426,7 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 
 <div class="main">
 <section class="section-card active archive-home" id="reportHome" aria-labelledby="archiveTitle">
-  <div class="sec-header"><h2 class="sec-title" id="archiveTitle">Отчёты ТО</h2><span class="sec-title">2.5.0</span></div>
+  <div class="sec-header"><h2 class="sec-title" id="archiveTitle">Отчёты ТО</h2><span class="sec-title">2.5.1</span></div>
   <div class="sec-body">
     <div class="module-actions"><button class="btn btn-primary" type="button" id="newReport" disabled>Новый отчёт</button>
       <button class="btn btn-ghost" type="button" id="resumeReport" disabled>Продолжить последний</button></div>
@@ -429,6 +444,12 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
     </div>
     <p class="archive-note">Отчёты с фото сохраняются в этом приложении на устройстве. Для отдельной копии сохрани JSON в «Файлы» или отправь его.</p>
     <p class="archive-note" id="historyStatus" role="status"></p>
+    <div class="subsec-title">Инженеры ТО</div>
+    <form id="engineerDirectoryForm" class="module-actions">
+      <input id="engineerDirectoryName" type="text" placeholder="Фамилия или ФИО" aria-label="Фамилия или ФИО" required maxlength="160">
+      <button type="submit" class="btn btn-ghost eng-add">+ Добавить инженера</button>
+    </form>
+    <div id="engineerDirectoryList"></div>
   </div>
 </section>
 <div id="reportEditor" hidden>
@@ -439,7 +460,7 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
   <div class="sec-body"><div class="fg fg-4"><div class="field"><label>Дата ТО</label><input type="date" id="f_date"/></div><div class="field"><label>Город</label><input type="text" id="f_city" placeholder="Санкт-Петербург"/></div><div class="field"><label>Кинотеатр</label><input type="text" id="f_cinema" placeholder="Название"/></div>
   <div class="field"><label for="f_address">Адрес</label><input id="f_address" type="text" placeholder="Улица, дом"></div>
   </div><div class="subsec-title">Инженеры ТО</div><div id="engineerList" class="fg fg-3"></div>
-  <button type="button" class="btn btn-ghost" onclick="addEngineer()">+ Добавить инженера</button></div>
+  <button type="button" class="btn btn-ghost eng-add" onclick="addEngineer()">+ Добавить инженера</button></div>
   <div class="nav-btns"><div class="step-info"></div><button class="btn btn-primary" onclick="goStep(1)">Далее →</button></div>
 </div>
 <div class="section-card" id="sec0">
@@ -610,7 +631,7 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
       <div class="field"><label>Дополнительная информация</label><textarea id="f_notes2" rows="5" placeholder="Любая доп. информация…"></textarea></div>
     </div>
     <div id="engineerSignatures" class="sig-grid"></div>
-    <button class="btn btn-ghost" onclick="addEngineer()">+ Добавить инженера</button>
+    <button class="btn btn-ghost eng-add" onclick="addEngineer()">+ Добавить инженера</button>
     <div class="sig-grid">
       <div class="sig-card">
         <h4>Системный администратор</h4>
@@ -641,6 +662,7 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
       <button class="btn btn-accent" onclick="exportPDF('full')">Полный PDF</button>
       <button class="btn btn-accent" onclick="exportPDF('summary')">Сводный PDF по всем залам</button>
     </div>
+    <p id="pdfStatus" role="status" hidden></p>
     <div id="pdfDownloads" class="module-actions" hidden aria-live="polite"></div>
     <p class="photo-hint">При выборе «Все залы» полный отчёт формирует отдельный PDF для каждого зала. Полный отчёт включает фотографии. Сводный — яркость, звук, неисправности, замены и примечания по каждому залу без фото.</p>
     <div class="subsec-title">Черновик и обмен между телефонами</div>
@@ -666,11 +688,11 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 
 <dialog id="batchCamera" aria-labelledby="cameraTitle">
 <div class="sec-title" id="cameraTitle">Камера</div><video id="cameraVideo" autoplay muted playsinline></video>
-<div class="module-actions"><button id="takePhoto" class="btn btn-primary" onclick="takeBatchPhoto()" disabled>Снять фото</button><button type="button" id="cameraTorch" class="btn btn-ghost" aria-pressed="false" onclick="toggleBatchTorch()" hidden disabled>Фонарь</button><button class="btn btn-ghost" onclick="useNativeCamera()">Камера iPhone</button><button class="btn btn-ghost" onclick="closeBatchCamera()">Готово</button></div>
+<div class="module-actions camera-actions"><button type="button" id="cameraTorch" class="btn btn-ghost" aria-pressed="false" onclick="toggleBatchTorch()" hidden disabled>Фонарь</button><button id="cameraNative" class="btn btn-ghost" onclick="useNativeCamera()">Камера iPhone</button><button id="takePhoto" class="btn btn-primary" onclick="takeBatchPhoto()" disabled>Снять фото</button><button id="cameraDone" class="btn" onclick="closeBatchCamera()">Готово</button></div>
 <div id="cameraTorchStatus" role="status"></div>
 <div id="cameraCount" role="status"></div></dialog>
 <div id="pdfPages"></div>
-<div class="pdf-overlay" id="pdfOverlay"><div class="pdf-box"><div class="spinner"></div><strong>Формируется PDF…</strong><p>Рендеринг страниц отчёта</p></div></div>
+<div class="pdf-overlay" id="pdfOverlay"><div class="pdf-box"><strong id="pdfTitle">Формируется PDF…</strong><p id="pdfPhase" role="status">Подготовка отчёта</p><progress id="pdfProgress" aria-labelledby="pdfTitle"></progress><p id="pdfSlow" hidden>Этот этап занимает больше обычного.</p></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -739,7 +761,7 @@ const AV_PARAMS=[
 const IMG_PARAMS=[
   {name:'Освещённость экрана Flat',norm:'Min 14 фл',opts:['Норма','Скорректировано']},
   {name:'Освещённость экрана Scope',norm:'Min 14 фл',opts:['Норма','Скорректировано']},
-  {name:'Освещённость экрана 2D',norm:'Min 14 фл',opts:['Норма','Скорректировано']},
+  {retired:true,name:'Освещённость экрана 2D',norm:'Min 14 фл',opts:['Норма','Скорректировано']},
   {name:'Освещённость экрана 3D',only3D:true,norm:'Min 4 фл',opts:['Норма','Скорректировано']},
   {name:'Геометрия / кадрирование',statusOnly:true,norm:'—',opts:['Норма','Скорректировано']},
   {name:'Резкость изображения',statusOnly:true,norm:'—',opts:['Норма','Настроено']},
@@ -806,6 +828,26 @@ function addEngineer(){
   engineers.push({name:'',date:'',sign:''});renderEngineers();
   document.querySelector(currentStep===7?'#engineerSignatures .sig-card:last-child input':'#engineerList .field:last-child input')?.focus();
 }
+const engineerDirectoryKey='cto_engineer_directory_v1';
+function engineerDirectory(){
+  try{const names=JSON.parse(localStorage.getItem(engineerDirectoryKey)||'[]');return Array.isArray(names)?names.filter(n=>typeof n==='string'&&n.trim()):[];}catch{return [];}
+}
+function saveEngineerDirectory(names){
+  try{localStorage.setItem(engineerDirectoryKey,JSON.stringify(names));renderEngineerDirectory();return true;}
+  catch{showToast('Не удалось сохранить список инженеров на этом устройстве');return false;}
+}
+function renderEngineerDirectory(){
+  const list=document.getElementById('engineerDirectoryList');list.replaceChildren();
+  const names=engineerDirectory();
+  names.forEach((name,i)=>{
+    const row=document.createElement('div');row.className='engineer-directory-row';
+    const label=document.createElement('span');label.textContent=name;
+    const edit=document.createElement('button');edit.type='button';edit.className='btn btn-ghost btn-sm';edit.textContent='Изменить';
+    edit.onclick=()=>{const value=prompt('Фамилия или ФИО',name)?.trim();if(value&&value.length<=160)saveEngineerDirectory([...new Set(names.map((n,j)=>j===i?value:n))]);};
+    const del=document.createElement('button');del.type='button';del.className='btn btn-ghost eng-remove';del.textContent='− Удалить';
+    del.onclick=()=>saveEngineerDirectory(names.filter((_,j)=>i!==j));row.append(label,edit,del);list.append(row);
+  });
+}
 function renderEngineers(){
   const first=document.getElementById('engineerList'), last=document.getElementById('engineerSignatures');
   first.replaceChildren();last.replaceChildren();
@@ -821,8 +863,15 @@ function renderEngineers(){
       wrap.append(label,input);return wrap;
     }
     const name=field('name','Инженер ТО '+(i+1)+' · ФИО');
+    const known=engineerDirectory();
+    if(known.length){
+      const picker=document.createElement('select');picker.setAttribute('aria-label','Выбрать инженера ТО '+(i+1));
+      picker.add(new Option('Выбрать из списка',''));known.forEach(n=>picker.add(new Option(n,n)));
+      picker.onchange=()=>{if(!picker.value)return;const input=name.querySelector('input');input.value=picker.value;input.dispatchEvent(new Event('input',{bubbles:true}));picker.value='';};
+      name.append(picker);
+    }
     if(engineers.length>1){
-      const remove=document.createElement('button');remove.type='button';remove.className='btn btn-ghost btn-sm';remove.textContent='Удалить инженера';
+      const remove=document.createElement('button');remove.type='button';remove.className='btn btn-ghost eng-remove';remove.textContent='− Удалить инженера';
       remove.onclick=e=>{e.preventDefault();engineers.splice(i,1);renderEngineers();};name.append(remove);
     }
     first.append(name);
@@ -887,6 +936,7 @@ function buildImgTable(){
   t.innerHTML='<thead><tr><th>Параметр</th><th>Норма</th><th>До</th><th>После</th><th>Статус</th><th>Примечание</th></tr></thead>';
   const tb=document.createElement('tbody');
   IMG_PARAMS.forEach((p,i)=>{
+    if(p.retired)return;
     const tr=document.createElement('tr');
     if(p.only3D){tr.setAttribute('data-3d-only','');tr.hidden=!has3D();}
     const btns=p.opts.map(o=>`<button class="status-btn" onclick="selStatus(this,'${o}')">${o}</button>`).join('');
@@ -1209,7 +1259,13 @@ document.addEventListener('paste',e=>{
 //  DRAFT
 // ═══════════════════════════════════════════════════════════
 let detailPhotos={};
-const detailSlots=[['fl_before','Яркость до ТО'],['fl_after','Яркость после ТО'],['cv_before','Конвергенция до ТО'],['cv_after','Конвергенция после ТО']];
+const detailSlots=[
+  ['fl_before_flat','Яркость до ТО · Flat'],['fl_before_scope','Яркость до ТО · Scope'],
+  ['fl_after_flat','Яркость после ТО · Flat'],['fl_after_scope','Яркость после ТО · Scope'],
+  ['fl_before','Яркость до ТО · ранее добавленные фото'],['fl_after','Яркость после ТО · ранее добавленные фото'],
+  ['cv_before','Конвергенция до ТО'],['cv_after','Конвергенция после ТО']
+];
+const legacyBrightness=k=>k==='fl_before'||k==='fl_after';
 async function readDetailPhoto(input,key){
   const file=input.files[0];if(!file)return;
   const target=detailPhotos;
@@ -1222,6 +1278,7 @@ function renderDetailPhotos(){
   detailSlots.forEach(([key])=>{
     const preview=document.getElementById('preview_'+key);
     preview.replaceChildren();
+    if(legacyBrightness(key))preview.parentElement.hidden=!detailImages(detailPhotos[key]).length;
     detailImages(detailPhotos[key]).forEach((src,index)=>{
       const img=document.createElement('img');img.src=src;img.alt='Снимок измерения';
       const del=document.createElement('button');del.className='btn btn-ghost btn-sm';del.textContent='Удалить фото';
@@ -1232,10 +1289,10 @@ function renderDetailPhotos(){
 }
 function buildDetailPhotos(){
   const el=document.getElementById('measurementPhotos');
-  el.innerHTML=detailSlots.map(([key,label],i)=>(i===0?'<div class="subsec-title extra-photo">Фут-ламберты — фото замера</div>':i===2?'<div class="subsec-title extra-photo">Конвергенция</div>':'')+
-    `<div class="extra-photo"><strong>${label}</strong><div class="photo-toolbar"><button class="btn btn-ghost btn-sm" onclick="document.getElementById('upload_${key}').click()">Добавить фото</button><button class="btn btn-ghost btn-sm" onclick="document.getElementById('camera_${key}').click()">Камера</button></div>`+
+  el.innerHTML=detailSlots.map(([key,label],i)=>(i===0?'<div class="subsec-title extra-photo">Яркость до ТО</div>':i===2?'<div class="subsec-title extra-photo">Яркость после ТО</div>':i===6?'<div class="subsec-title extra-photo">Конвергенция</div>':'')+
+    `<div class="extra-photo"${legacyBrightness(key)?' hidden':''}><strong>${i<4?label.split(' · ')[1]:label}</strong><div class="photo-toolbar"><button class="btn btn-ghost btn-sm" onclick="document.getElementById('upload_${key}').click()">Добавить фото</button><button class="btn btn-ghost btn-sm" onclick="document.getElementById('camera_${key}').click()">Камера</button></div>`+
     [['upload',''],['camera','capture="environment"']].map(([id,attrs])=>`<input type="file" hidden id="${id}_${key}" accept="image/*" ${attrs} onchange="readDetailPhoto(this,'${key}');this.value=''">`).join('')+
-    '<div id="preview_'+key+'"></div>'+(i<2?'<label><input id="include_'+key+'" type="checkbox"> Включить фото в PDF</label>':'')+'</div>').join('')+
+    '<div id="preview_'+key+'"></div>'+(key.startsWith('fl_')?'<label><input id="include_'+key+'" type="checkbox"> Включить фото в PDF</label>':'')+'</div>').join('')+
     '<label class="extra-photo"><input type="checkbox" id="include_cv"> Включить раздел «Конвергенция» в PDF</label>';
 }
 function storeHall(){
@@ -1243,7 +1300,11 @@ function storeHall(){
   document.querySelectorAll(hallSections).forEach(section=>section.querySelectorAll('input[id],select[id],textarea[id]').forEach(el=>{
     if(el.type!=='file')fields[el.id]=el.type==='checkbox'?el.checked:el.value;
   }));
+  // Retain legacy 2D measurements in archived data without displaying the row.
+  for(const [key,value] of Object.entries(halls[hallIndex].fields||{}))if(/^mv_imgTable_2_/.test(key))fields[key]=value;
   const statuses={};
+  const old2D=halls[hallIndex].statuses?.sb_imgTable_2;
+  if(old2D)statuses.sb_imgTable_2=old2D;
   document.querySelectorAll('.status-btns[id]').forEach(el=>{
     const selected=el.querySelector('.sel-ok,.sel-warn,.sel-err');
     if(selected)statuses[el.id]=selected.textContent.trim();
@@ -1842,6 +1903,14 @@ async function importArchiveBackup(input){
 }
 function installArchiveHandlers(){
   const home=$('reportHome');
+  renderEngineerDirectory();
+  $('engineerDirectoryForm').onsubmit=e=>{
+    e.preventDefault();const input=$('engineerDirectoryName'),name=input.value.trim();
+    if(!name)return;
+    const names=engineerDirectory();
+    if(!names.some(n=>n.toLocaleLowerCase('ru')===name.toLocaleLowerCase('ru'))&&!saveEngineerDirectory([...names,name]))return;
+    input.value='';
+  };
   $('newReport').onclick=()=>runArchiveAction(async()=>{enterReport(newProjectorId());markReportChanged(true);await latestWrite;});
   $('resumeReport').onclick=()=>openSavedReport($('resumeReport').dataset.id);
   $('openHistory').onclick=()=>openSavedReport($('historyReports').value);
@@ -1962,7 +2031,7 @@ function buildHallPDFPages(){
   }).join('');
   const avT=`<table class="pdf-table"><thead><tr><th>Параметр</th><th>Статус</th><th>Примечание</th></tr></thead><tbody>${avRows}</tbody></table>`;
   const imRows=IMG_PARAMS.map((p,i)=>{
-    if(p.only3D&&!has3D())return '';
+    if(p.retired||(p.only3D&&!has3D()))return '';
     if(p.statusOnly)return `<tr><td style="font-weight:600">${esc(p.name)}</td><td colspan="5">${getBadge(document.getElementById('sb_imgTable_'+i))}</td></tr>`;
     const vb=esc(document.getElementById(`mv_imgTable_${i}_b`)?.value||'—');
     const va=esc(document.getElementById(`mv_imgTable_${i}_a`)?.value||'—');
@@ -2057,7 +2126,7 @@ function summaryNotes(h){
     const status=sts['sb_avTable_'+i], note=f['mv_avTable_'+i+'_nt'];
     append(p.name,[status==='Норма'?'':status,note].filter(Boolean).join(' · '));
   });
-  IMG_PARAMS.forEach((p,i)=>{if(!p.statusOnly&&(!p.only3D||has3D()))append(p.name,f['mv_imgTable_'+i+'_nt']);});
+  IMG_PARAMS.forEach((p,i)=>{if(!p.retired&&!p.statusOnly&&(!p.only3D||has3D()))append(p.name,f['mv_imgTable_'+i+'_nt']);});
   AUDIO_CHANNELS.forEach(ch=>{
     const status=sts['ach_sb_'+ch.id];
     append(ch.name,[status==='Норма'?'':status,f['ach_'+ch.id+'_nt']].filter(Boolean).join(' · '));
@@ -2112,7 +2181,7 @@ function summaryBrightnessTable(h){
   const f=h.fields||{};
   const conflicts=new Set(validMergeConflicts(h.mergeConflicts).map(r=>r.label));
   const rows=IMG_PARAMS.slice(0,4).map((p,j)=>{
-    if(p.only3D&&!has3D())return '';
+    if(p.retired||(p.only3D&&!has3D()))return '';
     const before=String(f['mv_imgTable_'+j+'_b']??'').trim();
     const after=String(f['mv_imgTable_'+j+'_a']??'').trim();
     const disputed=conflicts.has(p.name+' — до')||conflicts.has(p.name+' — после');
@@ -2191,9 +2260,23 @@ function clearPdfDownloads(){
   const box=document.getElementById('pdfDownloads');box.replaceChildren();box.hidden=true;
 }
 function addPdfDownload(pdf,filename,label){
-  const url=URL.createObjectURL(pdf.output('blob'));pdfDownloadUrls.push(url);
+  const blob=pdf.output('blob');
+  if(!blob?.size)throw new Error('Получен пустой PDF');
+  const url=URL.createObjectURL(blob);pdfDownloadUrls.push(url);
   const link=document.createElement('a');link.className='btn btn-ghost';link.href=url;link.download=filename;link.textContent=label;
   const box=document.getElementById('pdfDownloads');box.append(link);box.hidden=false;
+}
+const pdfYield=()=>new Promise(r=>setTimeout(r,25));
+function pdfDeadline(work,ms,label){
+  let timer;
+  return Promise.race([work,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(label+' не завершился вовремя')),ms);})]).finally(()=>clearTimeout(timer));
+}
+function pdfImageDims(src){
+  const img=new Image();
+  return pdfDeadline(new Promise((resolve,reject)=>{
+    img.onload=()=>img.naturalWidth&&img.naturalHeight?resolve({w:img.naturalWidth,h:img.naturalHeight}):reject(new Error('У фото нет размеров'));
+    img.onerror=()=>reject(new Error('Не удалось прочитать фото'));img.src=src;
+  }),12000,'Загрузка фото').finally(()=>{img.onload=null;img.onerror=null;});
 }
 async function exportPDF(mode='full'){
   if(!window.jspdf||typeof window.html2canvas!=='function'){showToast('Для загрузки модуля PDF откройте форму с интернетом и обновите страницу');return;}
@@ -2210,24 +2293,33 @@ async function exportPDF(mode='full'){
   const overlay=document.getElementById('pdfOverlay');
   if(overlay.classList.contains('show'))return;
   clearPdfDownloads();
+  const phase=$('pdfPhase'),bar=$('pdfProgress'),slow=$('pdfSlow'),status=$('pdfStatus');
+  status.hidden=true;
+  let stage='',slowTimer;
+  const update=async (label,done,max)=>{
+    stage=label;phase.textContent=label;
+    if(max){bar.max=max;bar.value=done;}else bar.removeAttribute('value');
+    clearTimeout(slowTimer);slow.hidden=true;
+    slowTimer=setTimeout(()=>{slow.hidden=false;},8000);
+    await pdfYield();
+  };
   overlay.classList.add('show');
-  await new Promise(r=>setTimeout(r,60));
   try{
+    await update('Подготовка отчёта');
     const targets=pdfTargets(mode,selected,halls);
     const batch=mode==='full'&&selected===null&&targets.length>1;
+    let fileIndex=0;
     const filenameCounts=new Map();
     for(const target of targets){
+    fileIndex++;
+    const prefix=batch?'Файл '+fileIndex+' из '+targets.length+' · ':'';
+    await update(prefix+'Подготовка страниц');
     buildPDFPages(mode,target);
-    await new Promise(r=>setTimeout(r,500));
 
     const {jsPDF}=window.jspdf;
     const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
     const pages=document.querySelectorAll('#pdfPages .pdf-page');
 
-    // Helper: get natural dimensions of a data-URL image
-    function getImgDims(src){
-      return new Promise(res=>{const im=new Image();im.onload=()=>res({w:im.naturalWidth,h:im.naturalHeight});im.onerror=()=>res({w:1,h:1});im.src=src;});
-    }
     // Helper: letterbox — fit w×h inside bw×bh, return offset + final size
     function letterbox(w,h,bw,bh){const s=Math.min(bw/w,bh/h);const fw=w*s,fh=h*s;return{dx:(bw-fw)/2,dy:(bh-fh)/2,fw,fh};}
 
@@ -2242,12 +2334,21 @@ async function exportPDF(mode='full'){
     const PX_MMX=297/1122, PX_MMY=210/794;
 
     for(let i=0;i<pages.length;i++){
-      const canvas=await html2canvas(pages[i],{scale:1.65,useCORS:true,allowTaint:true,backgroundColor:'#ffffff',width:1122,height:794,windowWidth:1122,windowHeight:794});
-      const shellData=canvas.toDataURL('image/jpeg',0.93);
-      if(i>0) pdf.addPage();
-      pdf.addImage(shellData,'JPEG',0,0,297,210);
-
-      canvas.width=canvas.height=1;
+      const pageLabel=prefix+'Страница '+(i+1)+' из '+pages.length;
+      await update(pageLabel+' · рендеринг',i,pages.length);
+      if(i>0)pdf.addPage();
+      const originalFrames=new Set(document.querySelectorAll('iframe.html2canvas-container'));
+      let canvas;
+      try{
+        canvas=await pdfDeadline(html2canvas(pages[i],{scale:1.35,useCORS:true,backgroundColor:'#ffffff',width:1122,height:794,windowWidth:1122,windowHeight:794,imageTimeout:10000,
+          ignoreElements:el=>el.id==='pdfOverlay'||el.id==='reportEditor'||el.id==='reportHome'||(el.tagName==='LINK'&&el.href?.startsWith('https://fonts.googleapis.com/'))
+        }),30000,'Рендеринг страницы');
+        if(!canvas.width||!canvas.height)throw new Error('Получена пустая страница');
+        pdf.addImage(canvas.toDataURL('image/jpeg',0.93),'JPEG',0,0,297,210);
+      }finally{
+        if(canvas)canvas.width=canvas.height=1;
+        document.querySelectorAll('iframe.html2canvas-container').forEach(frame=>{if(!originalFrames.has(frame))frame.remove();});
+      }
       // PAGE 2 — overlay SW screenshots at native resolution
       const pageScreenshots=window._swPages[pages[i].dataset.swGroup]||[];
       if(pageScreenshots.length){
@@ -2264,11 +2365,12 @@ async function exportPDF(mode='full'){
           const hmm=r.height*PX_MMY;
           pdf.setFillColor(240,251,252);
           pdf.roundedRect(xmm,ymm,wmm,hmm,1,1,'F');
-          const dims=await getImgDims(src);
+          await update(pageLabel+' · Скриншот '+(idx+1)+' из '+swImgEls.length,i,pages.length);
+          const dims=await pdfImageDims(src);
           const lb=letterbox(dims.w,dims.h,wmm,hmm);
           const fmt=src.startsWith('data:image/png')?'PNG':'JPEG';
           try{pdf.addImage(src,fmt,xmm+lb.dx,ymm+lb.dy,lb.fw,lb.fh,'sw_'+i+'_'+idx,'NONE');}
-          catch(e){try{pdf.addImage(src,'JPEG',xmm+lb.dx,ymm+lb.dy,lb.fw,lb.fh,'sw_'+i+'_'+idx+'j','NONE');}catch(e2){}}
+          catch(e){try{pdf.addImage(src,'JPEG',xmm+lb.dx,ymm+lb.dy,lb.fw,lb.fh,'sw_'+i+'_'+idx+'j','NONE');}catch(e2){throw new Error('Не удалось вставить изображение в PDF');}}
         }
       }
 
@@ -2287,11 +2389,12 @@ async function exportPDF(mode='full'){
           pdf.setFillColor(248,250,251);
           pdf.roundedRect(x,y,phW,phH,1,1,'F');
           // Letterbox image to preserve aspect ratio
-          const dims=await getImgDims(ph.src);
+          await update(pageLabel+' · Фото '+(idx+1)+' из '+chunk.length,i,pages.length);
+          const dims=await pdfImageDims(ph.src);
           const lb=letterbox(dims.w,dims.h,phW,phH);
           const fmt=ph.src.startsWith('data:image/png')?'PNG':'JPEG';
           try{pdf.addImage(ph.src,fmt,x+lb.dx,y+lb.dy,lb.fw,lb.fh,'p'+pi+'_'+idx,'NONE');}
-          catch(e){try{pdf.addImage(ph.src,'JPEG',x+lb.dx,y+lb.dy,lb.fw,lb.fh,'p'+pi+'_'+idx+'j','NONE');}catch(e2){}}
+          catch(e){try{pdf.addImage(ph.src,'JPEG',x+lb.dx,y+lb.dy,lb.fw,lb.fh,'p'+pi+'_'+idx+'j','NONE');}catch(e2){throw new Error('Не удалось вставить изображение в PDF');}}
         }
       }
     }
@@ -2302,13 +2405,18 @@ async function exportPDF(mode='full'){
     const base=`АктТО_${cinema}_${label}_${date}`.replace(/[<>:"/\\|?*]/g,'_');
     const n=(filenameCounts.get(base)||0)+1;filenameCounts.set(base,n);
     const filename=base+(n>1?'_'+n:'')+'.pdf';
-    if(batch)addPdfDownload(pdf,filename,chosen?'Скачать PDF · зал '+chosen:'Скачать PDF · зал без номера');
-    else pdf.save(filename);
+    await update(prefix+'Подготавливаем файл PDF',pages.length,pages.length);
+    addPdfDownload(pdf,filename,batch?(chosen?'Скачать PDF · зал '+chosen:'Скачать PDF · зал без номера'):'Скачать PDF');
     }
-    showToast(batch?'PDF готовы: скачай нужные файлы по кнопкам':'✓ PDF сохранён');
-  }catch(e){console.error(e);alert('Ошибка PDF: '+e.message);}
-  document.getElementById('pdfPages').innerHTML='';
-  overlay.classList.remove('show');
+    showToast(batch?'PDF готовы: скачай нужные файлы по кнопкам':'PDF готов. Нажми «Скачать PDF»');
+  }catch(e){
+    status.textContent='Не удалось собрать PDF. '+stage+'. '+(e?.message||'Неизвестная ошибка')+'. Можно повторить экспорт.';
+    status.hidden=false;
+  }finally{
+    clearTimeout(slowTimer);slow.hidden=true;
+    $('pdfPages').replaceChildren();window._photoPages=[];window._swPages=[];
+    overlay.classList.remove('show');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
