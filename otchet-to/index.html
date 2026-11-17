@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-report-version="2" data-release="2.5.1">
+<html lang="ru" data-report-version="2" data-release="2.5.2">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="Отчёт ТО"/>
 <meta name="theme-color" content="#0F1C2E"/>
-<title>Акт ТО ЦКП · 2.5.1</title>
+<title>Акт ТО ЦКП · 2.5.2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -269,7 +269,7 @@ body{font-family:var(--font);background:#E8EEF4;color:var(--text);min-height:100
 .subsec-title{font-size:10.5px;font-weight:700;color:var(--teal2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px;padding-bottom:5px;border-bottom:2px solid var(--teal-light)}
 
 /* ── PDF PAGES (offscreen) ── */
-#pdfPages{position:fixed;left:-9999px;top:0;width:1122px;background:#fff;font-family:var(--font);-webkit-font-smoothing:antialiased}
+#pdfPages{position:fixed;left:-9999px;top:0;width:1122px;background:#fff;font-family:Arial,sans-serif;-webkit-font-smoothing:antialiased}
 .pdf-page{width:1122px;min-height:794px;background:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column}
 .pdf-top{background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:13px 26px;flex-shrink:0;border-bottom:3px solid var(--teal)}
 .pdf-top-left{display:flex;align-items:center;gap:11px}
@@ -426,7 +426,7 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 
 <div class="main">
 <section class="section-card active archive-home" id="reportHome" aria-labelledby="archiveTitle">
-  <div class="sec-header"><h2 class="sec-title" id="archiveTitle">Отчёты ТО</h2><span class="sec-title">2.5.1</span></div>
+  <div class="sec-header"><h2 class="sec-title" id="archiveTitle">Отчёты ТО</h2><span class="sec-title">2.5.2</span></div>
   <div class="sec-body">
     <div class="module-actions"><button class="btn btn-primary" type="button" id="newReport" disabled>Новый отчёт</button>
       <button class="btn btn-ghost" type="button" id="resumeReport" disabled>Продолжить последний</button></div>
@@ -2057,17 +2057,16 @@ function buildHallPDFPages(){
     if(gc('wk_'+i)&&g('wn_'+i).trim())rows.push([g('wn_'+i),g('wa_'+i),g('wc_'+i)]);
   }
   const hasArticle=rows.some(r=>r[1].trim()),hasResult=rows.some(r=>r[2].trim());
-  const twoColumns=!hasArticle&&!hasResult&&![g('hall_faults'),g('hall_notes'),...(halls[hallIndex].importNotes||[])].some(v=>v.trim());
-  const workPageSize=twoColumns?24:16;
+  const workPageSize=24;
   let workOffset=0,filterOffset=0,workPages=0;
   do{
     let workCountOnPage=Math.min(workPageSize,rows.length-workOffset);
-    let filterCountOnPage=Math.min(16,filters.length-filterOffset);
+    let filterCountOnPage=workOffset+workCountOnPage>=rows.length?Math.min(16,filters.length-filterOffset):0;
     const title=workPages?'Выполненные работы и замены деталей · продолжение':'Выполненные работы и замены деталей';
     const render=()=>{
       const slice=rows.slice(workOffset,workOffset+workCountOnPage),mid=Math.ceil(slice.length/2);
-      const work=(twoColumns&&slice.length>1
-        ?'<div class="pdf-work-columns">'+pdfWorksTable(slice.slice(0,mid),workOffset,false,false)+pdfWorksTable(slice.slice(mid),workOffset+mid,false,false)+'</div>'
+      const work=(slice.length>1
+        ?'<div class="pdf-work-columns">'+pdfWorksTable(slice.slice(0,mid),workOffset,hasArticle,hasResult)+pdfWorksTable(slice.slice(mid),workOffset+mid,hasArticle,hasResult)+'</div>'
         :(slice.length||workPages===0)?pdfWorksTable(slice,workOffset,hasArticle,hasResult):'');
       const filter=pdfFiltersTable(filters.slice(filterOffset,filterOffset+filterCountOnPage));
       return pdfPage(String(6+workPages),title,work+filter);
@@ -2075,8 +2074,8 @@ function buildHallPDFPages(){
     C.insertAdjacentHTML('beforeend',render());
     // Match the fixed height used by html2canvas instead of cutting off tall tables.
     while(C.lastElementChild.offsetHeight>794){
-      if(workCountOnPage>1)workCountOnPage--;
-      else if(filterCountOnPage>1||(filterCountOnPage===1&&workCountOnPage===1))filterCountOnPage--;
+      if(filterCountOnPage>1||(filterCountOnPage===1&&workCountOnPage>0))filterCountOnPage--;
+      else if(workCountOnPage>1)workCountOnPage--;
       else break;
       C.lastElementChild.outerHTML=render();
     }
@@ -2097,7 +2096,7 @@ function buildHallPDFPages(){
   appendProjectorNotes(C,halls[hallIndex]);
   const offset=window._photoPages.length;window._photoPages.push(...photoPages);
   photoPages.forEach(({title,items},i)=>{
-    C.innerHTML+=pdfPage(String(7+workPages+i),title,`<div data-photo-page="${offset+i}" style="flex:1;min-height:560px;background:#F8FAFB;border-radius:6px;">${items.length?items.map((ph,j)=>`<div style="position:absolute;left:${(7+(j%2)*143.5+1)/297*1122}px;top:${(33+Math.floor(j/2)*86.5+77.5+1)/210*794}px;font-size:10px;color:#64748B;max-width:510px;overflow:hidden;white-space:nowrap">${esc(ph.caption||'')}</div>`).join(''):'<div style="padding:40px;text-align:center;color:#94A3B8;font-size:13px">Фотографии не загружены</div>'}</div>`);
+    C.innerHTML+=pdfPage(String(7+workPages+i),title,`<div data-photo-page="${offset+i}" style="flex:1;min-height:560px;background:#F8FAFB;border-radius:6px;">${items.length?'':'<div style="padding:40px;text-align:center;color:#94A3B8;font-size:13px">Фотографии не загружены</div>'}</div>`);
   });
 }
 function pdfFiltersTable(rows){
@@ -2147,7 +2146,9 @@ function notesMarkup(items){
 function appendNotesPages(C,title,items){
   const pages=[];let batch=[], used=0;
   items.forEach(([label,text])=>{
-    const lines=text.split('\n').flatMap(line=>line.match(/.{1,125}/gu)||['']);
+    const ctx=document.createElement('canvas').getContext('2d');
+    ctx.font='11px Arial';
+    const lines=pdfWrap(ctx,text,1038);
     for(let start=0;start<lines.length;start+=12){
       const chunk=lines.slice(start,start+12), cost=chunk.length+3;
       if(batch.length&&used+cost>23){pages.push(batch);batch=[];used=0;}
@@ -2266,6 +2267,104 @@ function addPdfDownload(pdf,filename,label){
   const link=document.createElement('a');link.className='btn btn-ghost';link.href=url;link.download=filename;link.textContent=label;
   const box=document.getElementById('pdfDownloads');box.append(link);box.hidden=false;
 }
+
+// Measure each line in the same clone that supplies the PDF layout, then use
+// the browser's native canvas to shape the entire line (including punctuation).
+function pdfTextRuns(page){
+  const doc=page.ownerDocument, view=doc.defaultView, base=page.getBoundingClientRect();
+  const range=doc.createRange(), runs=[], marked=[];
+  for(const el of page.querySelectorAll('*')){
+    if(el.children.length||el.childNodes.length!==1||el.firstChild.nodeType!==3)continue;
+    const node=el.firstChild, text=node.data, css=view.getComputedStyle(el);
+    if(!text.trim()||css.visibility!=='visible'||css.display==='none')continue;
+    range.selectNodeContents(node);
+    const boxes=Array.from(range.getClientRects()).filter(r=>r.width>0&&r.height>0);
+    if(!boxes.length)continue;
+    const clipBox=el.getBoundingClientRect();
+    const spacing=parseFloat(css.letterSpacing)||0;
+    const saved={font:[css.fontStyle,css.fontWeight,css.fontSize,css.fontFamily].join(' '),color:css.color,spacing,
+      size:parseFloat(css.fontSize),uppercase:css.textTransform==='uppercase',
+      preserve:css.whiteSpace.startsWith('pre'),
+      clip:css.overflowX==='hidden'?[clipBox.left-base.left,clipBox.top-base.top,clipBox.width,clipBox.height]:null,
+      ellipsis:css.textOverflow==='ellipsis'};
+    const add=(line,r)=>{line=saved.preserve?line.replace(/\t/g,'    '):line.trim().replace(/\s+/g,' ');
+      if(line)runs.push({...saved,text:saved.uppercase?line.toUpperCase():line,x:r.left-base.left,y:r.top-base.top,height:r.height});};
+    if(boxes.length===1&&!/[\r\n]/.test(text))add(text,boxes[0]);
+    else{
+      let offset=0, chunk='', first=null;
+      const flush=()=>{if(first)add(chunk,first);chunk='';first=null;};
+      for(const ch of text){
+        range.setStart(node,offset);offset+=ch.length;range.setEnd(node,offset);
+        if(ch==='\n'||ch==='\r'){if(saved.preserve)flush();else if(first)chunk+=' ';continue;}
+        const r=range.getBoundingClientRect();
+        if(r.width===0)continue;
+        if(first&&Math.abs(r.top-first.top)>1)flush();
+        if(!first)first=r;
+        chunk+=ch;
+      }
+      flush();
+    }
+    marked.push(el);
+  }
+  marked.forEach(el=>{el.style.color='transparent';});
+  return runs;
+}
+function pdfPaintText(canvas,runs){
+  const ctx=canvas.getContext('2d'), scaleX=canvas.width/1122, scaleY=canvas.height/794;
+  ctx.save();ctx.setTransform(scaleX,0,0,scaleY,0,0);ctx.textBaseline='alphabetic';ctx.textAlign='left';
+  for(const r of runs){
+    ctx.font=r.font;ctx.fillStyle=r.color;
+    if('letterSpacing' in ctx)ctx.letterSpacing=r.spacing+'px';
+    ctx.save();let text=r.text;
+    if(r.clip){
+      ctx.beginPath();ctx.rect(...r.clip);ctx.clip();
+      const w=r.clip[0]+r.clip[2]-r.x;
+      if(r.ellipsis&&ctx.measureText(text).width>w){
+        const chars=Array.from(text);
+        while(chars.length&&ctx.measureText(chars.join('')+'…').width>w)chars.pop();
+        text=chars.length?chars.join('')+'…':'';
+      }
+    }
+    const m=ctx.measureText(text);
+    const a=m.fontBoundingBoxAscent??r.size*.8,d=m.fontBoundingBoxDescent??r.size*.2;
+    ctx.fillText(text,r.x,r.y+(r.height+a-d)/2);ctx.restore();
+  }
+  ctx.restore();
+}
+function pdfWrap(ctx,text,width){
+  return String(text).split(/\r?\n/).flatMap(part=>{
+    const lines=[];let line='';
+    for(const token of part.match(/\S+|\s+/gu)||[]){
+      if(/^\s+$/u.test(token)){if(line)line+=token;continue;}
+      if(line&&ctx.measureText(line+token).width>width){lines.push(line.trimEnd());line='';}
+      if(ctx.measureText(token).width>width){
+        for(const ch of token){
+          if(line&&ctx.measureText(line+ch).width>width){lines.push(line);line='';}
+          line+=ch;
+        }
+      }else line+=token;
+    }
+    lines.push(line.trimEnd());return lines;
+  });
+}
+function pdfPhotoCaption(pdf,text,x,y,w,alias){
+  if(!text?.trim())return;
+  const canvas=document.createElement('canvas');
+  const factor=8;
+  canvas.width=Math.ceil(w*factor);canvas.height=40;
+  try{
+    const ctx=canvas.getContext('2d');
+    ctx.font='22px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#475569';
+    const lines=pdfWrap(ctx,text,canvas.width-12);
+    if(lines.length>1){
+      canvas.height=lines.length*26+4;
+      ctx.font='22px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#475569';
+    }
+    lines.forEach((line,i)=>ctx.fillText(line,canvas.width/2,lines.length===1?20:15+i*26));
+    pdf.addImage(canvas.toDataURL('image/png'),'PNG',x,y,w,Math.min(8.2,canvas.height/factor),alias,'FAST');
+  }finally{canvas.width=canvas.height=1;}
+}
+
 const pdfYield=()=>new Promise(r=>setTimeout(r,25));
 function pdfDeadline(work,ms,label){
   let timer;
@@ -2327,7 +2426,7 @@ async function exportPDF(mode='full'){
     // Content area after header+sec-label: y≈33mm, footer at y≈202mm → 169mm tall
     // Left/right padding: 7mm each → 283mm wide
     const PH_X0=7, PH_Y0=33, PH_W=283, PH_H=169;
-    const PH_GAP=4, PH_CAP=5;              // gap between cells, caption height
+    const PH_GAP=4, PH_CAP=9;              // gap between cells, caption height
     const phW=(PH_W-PH_GAP)/2;            // ≈139.5mm per column
     const phH=(PH_H-PH_GAP-2*PH_CAP)/2;  // ≈77.5mm per row
     // px→mm scale (html2canvas is told width=1122,height=794)
@@ -2338,13 +2437,15 @@ async function exportPDF(mode='full'){
       await update(pageLabel+' · рендеринг',i,pages.length);
       if(i>0)pdf.addPage();
       const originalFrames=new Set(document.querySelectorAll('iframe.html2canvas-container'));
-      let canvas;
+      let canvas,textRuns=[];
       try{
         canvas=await pdfDeadline(html2canvas(pages[i],{scale:1.35,useCORS:true,backgroundColor:'#ffffff',width:1122,height:794,windowWidth:1122,windowHeight:794,imageTimeout:10000,
+          onclone:(_doc,clonedPage)=>{textRuns=pdfTextRuns(clonedPage);},
           ignoreElements:el=>el.id==='pdfOverlay'||el.id==='reportEditor'||el.id==='reportHome'||(el.tagName==='LINK'&&el.href?.startsWith('https://fonts.googleapis.com/'))
         }),30000,'Рендеринг страницы');
         if(!canvas.width||!canvas.height)throw new Error('Получена пустая страница');
-        pdf.addImage(canvas.toDataURL('image/jpeg',0.93),'JPEG',0,0,297,210);
+        pdfPaintText(canvas,textRuns);
+        pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,0,297,210);
       }finally{
         if(canvas)canvas.width=canvas.height=1;
         document.querySelectorAll('iframe.html2canvas-container').forEach(frame=>{if(!originalFrames.has(frame))frame.remove();});
@@ -2395,6 +2496,7 @@ async function exportPDF(mode='full'){
           const fmt=ph.src.startsWith('data:image/png')?'PNG':'JPEG';
           try{pdf.addImage(ph.src,fmt,x+lb.dx,y+lb.dy,lb.fw,lb.fh,'p'+pi+'_'+idx,'NONE');}
           catch(e){try{pdf.addImage(ph.src,'JPEG',x+lb.dx,y+lb.dy,lb.fw,lb.fh,'p'+pi+'_'+idx+'j','NONE');}catch(e2){throw new Error('Не удалось вставить изображение в PDF');}}
+          pdfPhotoCaption(pdf,ph.caption,x,y+lb.dy+lb.fh+.6,phW,'caption_'+pi+'_'+idx);
         }
       }
     }
