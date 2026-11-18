@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-report-version="2" data-release="2.5.4">
+<html lang="ru" data-report-version="2" data-release="2.5.5">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="Отчёт ТО"/>
 <meta name="theme-color" content="#0F1C2E"/>
-<title>Акт ТО ЦКП · 2.5.4</title>
+<title>Акт ТО ЦКП · 2.5.5</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -292,8 +292,10 @@ body{font-family:var(--font);background:#E8EEF4;color:var(--text);min-height:100
 .pdf-metric-value{font-size:20px;font-weight:800;color:var(--navy);line-height:1.1;margin-top:2px}
 .pdf-metric-sub{font-size:8.5px;color:var(--text3);margin-top:1px}
 .pdf-info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:8px}
+.pdf-info-grid.pdf-cover-grid{grid-template-columns:minmax(0,1.15fr) minmax(0,.9fr) minmax(0,1.75fr) minmax(0,.8fr) minmax(0,1fr);align-items:stretch}
 .pdf-cover-engineers{grid-column:1/-1}
-.pdf-cover-engineers .pdf-info-value{white-space:normal;overflow-wrap:anywhere}
+.pdf-cover-grid .pdf-info-value{white-space:normal;overflow-wrap:anywhere}
+.pdf-cover-grid .pdf-info-cell{min-width:0}
 .pdf-info-cell{background:var(--gray1);border-radius:7px;padding:8px 10px;border:1px solid var(--gray2)}
 .pdf-info-label{font-size:8px;font-weight:700;color:var(--teal2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
 .pdf-info-value{font-size:12px;font-weight:600;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -428,7 +430,7 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 
 <div class="main">
 <section class="section-card active archive-home" id="reportHome" aria-labelledby="archiveTitle">
-  <div class="sec-header"><h2 class="sec-title" id="archiveTitle">Отчёты ТО</h2><span class="sec-title">2.5.4</span></div>
+  <div class="sec-header"><h2 class="sec-title" id="archiveTitle">Отчёты ТО</h2><span class="sec-title">2.5.5</span></div>
   <div class="sec-body">
     <div class="module-actions"><button class="btn btn-primary" type="button" id="newReport" disabled>Новый отчёт</button>
       <button class="btn btn-ghost" type="button" id="resumeReport" disabled>Продолжить последний</button></div>
@@ -756,8 +758,8 @@ const AUDIO_CHANNELS=[
   {id:'Sub',name:'Сабвуфер (Sub, 85 дБ)',               opts:['Норма','Требует ремонта','Скорректировано']},
 ];
 const AV_PARAMS=[
-  {name:'Диагностика звук. процессора',norm:'85.5/82.5 дБ',opts:['Норма','Исправлено','Требует внимания']},
-  {name:'Усилители звука',norm:'—',opts:['Норма','Требует ремонта']},
+  {name:'Диагностика звук. процессора',audioOnly:true,norm:'85.5/82.5 дБ',opts:['Норма','Исправлено','Требует внимания']},
+  {name:'Усилители звука',audioOnly:true,norm:'—',opts:['Норма','Требует ремонта']},
   {name:'Вытяжка проектора',norm:'Min 14 °H',opts:['Норма','Скорректировано']},
   {name:'Температура воздуха',norm:'Max 26 °C',opts:['Норма','Приняты меры']},
 ];
@@ -1643,8 +1645,13 @@ function mergeImport(){
   restoreHall();renderEngineers();clearImport();mergePlan=null;renderNavigation();renderReportOptions();
   markReportChanged(true);showToast('Импорт применён');
 }
-function appendMergePDF(C,h){
-  const rows=validMergeConflicts(h.mergeConflicts);
+function isSummaryExcludedConflict(label){
+  const excludedFields=['f_has3d','f_3d','f_3dsn','f_audio','f_audiosn'].map(mergeFieldLabel);
+  const sectionNames=[...AUDIO_CHANNELS.map(ch=>ch.name),...AV_PARAMS.filter(p=>p.audioOnly).map(p=>p.name),...IMG_PARAMS.filter(p=>p.only3D).map(p=>p.name)];
+  return excludedFields.includes(label)||sectionNames.some(name=>label===name||label.startsWith(name+' — '));
+}
+function appendMergePDF(C,h,mode='full'){
+  const rows=validMergeConflicts(h.mergeConflicts).filter(r=>mode!=='summary'||!isSummaryExcludedConflict(r.label));
   appendNotesPages(C,'Расхождения при объединении · '+projectorLabel(h,hallIndex),rows.map(r=>[r.label+' — '+r.source,r.value]));
 }
 
@@ -2191,14 +2198,11 @@ function summaryNotes(h){
   append('Примечания',hallNotesText(f));
   (h.importNotes||[]).forEach(v=>append('Примечание из добавленного акта',v));
   AV_PARAMS.forEach((p,i)=>{
+    if(p.audioOnly)return;
     const status=sts['sb_avTable_'+i], note=f['mv_avTable_'+i+'_nt'];
     append(p.name,[status==='Норма'?'':status,note].filter(Boolean).join(' · '));
   });
-  IMG_PARAMS.forEach((p,i)=>{if(!p.retired&&!p.statusOnly&&(!p.only3D||has3D()))append(p.name,f['mv_imgTable_'+i+'_nt']);});
-  AUDIO_CHANNELS.forEach(ch=>{
-    const status=sts['ach_sb_'+ch.id];
-    append(ch.name,[status==='Норма'?'':status,f['ach_'+ch.id+'_nt']].filter(Boolean).join(' · '));
-  });
+  IMG_PARAMS.forEach((p,i)=>{if(!p.retired&&!p.statusOnly&&!p.only3D)append(p.name,f['mv_imgTable_'+i+'_nt']);});
   document.querySelectorAll('[data-filter-key]').forEach(box=>{
     if(box.dataset.filterKey!==filterKey())return;
     box.querySelectorAll('[data-filter-id]').forEach(tr=>{
@@ -2251,7 +2255,7 @@ function summaryBrightnessTable(h){
   const f=h.fields||{};
   const conflicts=new Set(validMergeConflicts(h.mergeConflicts).map(r=>r.label));
   const rows=IMG_PARAMS.slice(0,4).map((p,j)=>{
-    if(p.retired||(p.only3D&&!has3D()))return '';
+    if(p.retired||p.only3D)return '';
     const before=String(f['mv_imgTable_'+j+'_b']??'').trim();
     const after=String(f['mv_imgTable_'+j+'_a']??'').trim();
     const disputed=conflicts.has(p.name+' — до')||conflicts.has(p.name+' — после');
@@ -2270,8 +2274,7 @@ function appendSummary(C,h,i){
   const audio=AUDIO_CHANNELS.map(ch=>row(ch.name,f['ach_'+ch.id+'_b'],f['ach_'+ch.id+'_a'])).join('');
   const notes=summaryNotes(h);
   if(!notes.length)notes.push(['Неисправности, замены и примечания','Нет данных']);
-  const info=has3D()?'<div class="pdf-info-grid">'+[['Модель 3D-системы',f.f_3d],['Серийный номер 3D-системы',f.f_3dsn]].map(([label,value])=>'<div class="pdf-info-cell"><div class="pdf-info-label">'+esc(label)+'</div><div class="pdf-info-value">'+esc(value||'—')+'</div></div>').join('')+'</div>':'';
-  const intro=info+'<div class="pdf-two-col">'+summaryBrightnessTable(h)+table('Звук','дБ',audio)+'</div>';
+  const intro='<div class="pdf-two-col">'+summaryBrightnessTable(h)+table('Звук','дБ',audio)+'</div>';
   const inline=notes.length<=4&&notes.every(([,v])=>v.length<=120&&!v.includes('\n'));
   C.insertAdjacentHTML('beforeend',pdfPage('',projectorLabel(h,i),intro+(inline?notesMarkup(notes):'')));
   if(!inline)appendNotesPages(C,'Сводка · неисправности, замены и примечания',notes);
@@ -2284,7 +2287,7 @@ function buildPDFPages(mode='full',selected=null){
   const selectedHalls=halls.map((h,i)=>[h,i]).filter(([h])=>mode==='summary'||selected===null||hallKey(h)===selected);
   const cover=[['Кинотеатр',g('f_cinema')],['Город',g('f_city')],['Адрес',g('f_address')],['Дата ТО',g('f_date')],[mode==='summary'?'Залы':'Зал',[...new Map(selectedHalls.map(([h,i])=>[hallKey(h),h.fields?.f_hall?.trim()||'Без номера'])).values()].join(', ')],['Инженеры ТО',engineers.map(e=>e.name.trim()).filter(Boolean).join(', ')]];
   const info=cover.map(([label,value],i)=>'<div class="pdf-info-cell'+(i===cover.length-1?' pdf-cover-engineers':'')+'"><div class="pdf-info-label">'+label+'</div><div class="pdf-info-value">'+esc(value||'—')+'</div></div>').join('');
-  const first=pdfPage('1',mode==='summary'?'Сводный отчёт по всем залам':'Карточка ТО','<div class="pdf-info-grid">'+info+'</div>');
+  const first=pdfPage('1',mode==='summary'?'Сводный отчёт по всем залам':'Карточка ТО','<div class="pdf-info-grid pdf-cover-grid">'+info+'</div>');
   C.insertAdjacentHTML('beforeend',first);
   const stripHall=page=>{page.querySelector('.pdf-top-hall').remove();page.querySelector('.pdf-footer-left').textContent=['Акт ТО ЦКП',g('f_cinema'),g('f_date')].filter(Boolean).join(' · ');};
   stripHall(C.lastElementChild);
@@ -2292,7 +2295,7 @@ function buildPDFPages(mode='full',selected=null){
     selectedHalls.sort(([a,ai],[b,bi])=>hallKey(a).localeCompare(hallKey(b),'ru',{numeric:true})||ai-bi);
     selectedHalls.forEach(([h,i])=>{
       hallIndex=i;restoreHall();
-      if(mode==='summary'){appendSummary(C,h,i);appendMergePDF(C,h);return;}
+      if(mode==='summary'){appendSummary(C,h,i);appendMergePDF(C,h,mode);return;}
       const start=C.childElementCount;
       buildHallPDFPages();
       const page=C.children[start+1];
