@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-report-version="2" data-release="2.5.5">
+<html lang="ru" data-report-version="2" data-release="2.5.6">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="Отчёт ТО"/>
 <meta name="theme-color" content="#0F1C2E"/>
-<title>Акт ТО ЦКП · 2.5.5</title>
+<title>Акт ТО ЦКП · 2.5.6</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -381,6 +381,7 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 .archive-home .sec-body{display:grid;gap:12px}
 .archive-home h2{font-size:18px}.archive-home select{width:100%}
 .archive-home .module-actions{margin:0}.archive-home .btn:disabled{opacity:.55;cursor:default}
+.archive-home .archive-delete{color:#B42318;border-color:#E7B5B0}
 .archive-note{font-size:13px;color:var(--text3);line-height:1.45}
 #homeActions{background:var(--navy);max-width:1080px;margin:auto;padding:5px 14px 6px;display:flex;gap:6px 9px;align-items:center;flex-wrap:wrap}
 #homeActions .btn{min-height:32px;padding:5px 9px;font-size:12px}
@@ -430,7 +431,7 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 
 <div class="main">
 <section class="section-card active archive-home" id="reportHome" aria-labelledby="archiveTitle">
-  <div class="sec-header"><h2 class="sec-title" id="archiveTitle">Отчёты ТО</h2><span class="sec-title">2.5.5</span></div>
+  <div class="sec-header"><h2 class="sec-title" id="archiveTitle">Отчёты ТО</h2><span class="sec-title">2.5.6</span></div>
   <div class="sec-body">
     <div class="module-actions"><button class="btn btn-primary" type="button" id="newReport" disabled>Новый отчёт</button>
       <button class="btn btn-ghost" type="button" id="resumeReport" disabled>Продолжить последний</button></div>
@@ -440,6 +441,7 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
     <div class="module-actions">
       <button class="btn btn-primary" type="button" id="openHistory" disabled>Редактировать отчёт</button>
       <button class="btn btn-ghost" type="button" id="prepareBackup" disabled>Резервная копия JSON</button>
+      <button class="btn btn-ghost archive-delete" type="button" id="deleteHistory" disabled>Удалить акт</button>
       <button class="btn btn-ghost" type="button" id="importBackup" disabled>Загрузить копию</button>
       <input id="archiveFile" type="file" accept=".json,.html,.htm,application/json,text/html" hidden>
     </div>
@@ -1746,6 +1748,7 @@ function persistReport(id,since,raw,keys,sourceTime=Date.now()){
   return archiveTx(['reports','images','catalog'],'readwrite',tx=>{
     const reports=tx.objectStore('reports'), images=tx.objectStore('images');
     reports.get(id).onsuccess=e=>{
+      if(e.target.result?.deleted){tx.abort();return;}
       const old=new Set(e.target.result?.refs||[]);
       for(const [k,src] of sources)if(!old.has(k))images.put(src,[id,k]);
       for(const k of old)if(!sources.has(k))images.delete([id,k]);
@@ -1753,6 +1756,18 @@ function persistReport(id,since,raw,keys,sourceTime=Date.now()){
       tx.objectStore('catalog').put(entry,id);
     };
   }).then(()=>{for(const [src,key] of keys)if(!sources.has(key)&&pendingWrites<=1)keys.delete(src);});
+}
+function eraseArchiveReport(id){
+  return archiveTx(['reports','images','catalog'],'readwrite',tx=>{
+    const reports=tx.objectStore('reports'), images=tx.objectStore('images');
+    reports.get(id).onsuccess=e=>{
+      const row=e.target.result;
+      for(const key of row?.refs||[])images.delete([id,key]);
+      // Keep only a marker so a stale editor or legacy migration cannot recreate this act.
+      reports.put({deleted:true},id);
+      tx.objectStore('catalog').delete(id);
+    };
+  });
 }
 function getArchiveEntry(id){
   return archiveTx(['catalog'],'readonly',(tx,set)=>{tx.objectStore('catalog').get(id).onsuccess=e=>set(e.target.result);});
@@ -1762,7 +1777,7 @@ function readArchiveReport(id){
     tx.objectStore('reports').get(id).onsuccess=e=>{
       const row=e.target.result;
       const all=new Map();
-      if(!row){set(null);return;}
+      if(!row||row.deleted){set(null);return;}
       let left=row.refs.length;
       const finish=()=>set([...all.values()].some(v=>typeof v!=='string')?null:{
         data:mapReportImages(row.data,k=>all.get(k)||''),
@@ -1825,7 +1840,7 @@ function resetBackup(){
 }
 function archiveSelection(){
   const disabled=!$('historyReports').value||archiveBusy;
-  $('openHistory').disabled=disabled;$('prepareBackup').disabled=disabled;
+  $('openHistory').disabled=disabled;$('prepareBackup').disabled=disabled;$('deleteHistory').disabled=disabled;
   resetBackup();
 }
 function archiveControls(){
@@ -1898,6 +1913,26 @@ async function goReportHome(){
     await showReportHome(id);
   });
 }
+async function deleteSavedReport(){
+  const sel=$('historyReports'), id=sel.value;
+  if(!id||archiveBusy||editingId===id)return;
+  const label=sel.selectedOptions[0].text;
+  if(!confirm('Удалить этот акт из истории?\n\n'+label+'\n\nАкт и его фотографии будут удалены с этого устройства. Ранее выгруженные файлы и другие версии акта останутся.'))return;
+  return runArchiveAction(async()=>{
+    reportAction++;
+    $('historyStatus').textContent='';
+    try{await eraseArchiveReport(id);}
+    catch{throw new Error('Не удалось удалить акт. Попробуй ещё раз.');}
+    try{await showReportHome();}
+    catch{
+      sel.selectedOptions[0]?.remove();sel.value='';
+      if($('resumeReport').dataset.id===id)$('resumeReport').dataset.id='';
+      $('historyStatus').textContent='Акт удалён. Чтобы обновить историю, открой приложение заново.';
+      return;
+    }
+    $('historyStatus').textContent='Акт удалён.';
+  });
+}
 async function prepareArchiveBackup(){
   const id=$('historyReports').value;
   if(!id)return;
@@ -1918,6 +1953,8 @@ async function prepareArchiveBackup(){
 }
 async function migrateLegacyDraft(){
   if(await getArchiveEntry(archiveLegacyId))return;
+  const removed=await archiveTx(['reports'],'readonly',(tx,set)=>{tx.objectStore('reports').get(archiveLegacyId).onsuccess=e=>set(e.target.result?.deleted);});
+  if(removed)return;
   let data=await draftStore('readonly',store=>store.get('current'));
   if(!data){
     const fields=JSON.parse(localStorage.getItem('cto_v5')||'null');
@@ -1966,6 +2003,7 @@ function installArchiveHandlers(){
   $('showHistoryVersions').onchange=()=>void runArchiveAction(()=>showReportHome($('historyReports').value));
   $('historyReports').onchange=()=>{reportAction++;$('historyStatus').textContent='';archiveSelection();};
   $('prepareBackup').onclick=prepareArchiveBackup;
+  $('deleteHistory').onclick=deleteSavedReport;
   $('downloadBackup').onclick=()=>{if(backupFile)downloadData(backupFile);};
   $('shareBackup').onclick=()=>{if(backupFile)void shareBackup(backupFile);};
   $('importBackup').onclick=()=>$('archiveFile').click();
