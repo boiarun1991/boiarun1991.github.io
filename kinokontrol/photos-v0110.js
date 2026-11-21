@@ -1,6 +1,8 @@
 'use strict';
 const categories=[['general','Общий вид'],['scheme','Схема'],['defects','Нарушения'],['thermal','Тепловизионная съёмка']];
 let photoView='inbox', photoSourcesOpen=false;
+let editingPhotoFindingId='';
+
 const isCategory=k=>categories.some(([id])=>id===k);
 const validPhoto=s=>/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(s||'');
 const photoSrc=x=>validPhoto(x.marked)?x.marked:(validPhoto(x.data)?x.data:'');
@@ -31,12 +33,32 @@ function renderPhotos(){
     '<div class="field"><label>Распределить в категорию</label><select data-photo-move="'+id+'">'+categoryOptions(photoCategory(x))+'</select></div>'+
     '<div class="field"><label>Комментарий</label><input data-path="photo.'+id+'.comment" value="'+html(x.comment||'')+'"></div>'+
     '<div class="field"><label>Связь с замечанием</label><select data-path="photo.'+id+'.findingId"><option value="">Без замечания</option>'+findings.map(f=>'<option value="'+html(f.id)+'" '+(x.findingId===f.id?'selected':'')+'>'+html(f.description||'Замечание')+'</option>').join('')+'</select></div>'+
-    '<div class="actions"><button type="button" class="smallbtn" data-photo-edit="'+id+'">Разметить</button><button type="button" class="smallbtn" data-action="add-finding" data-photo="'+id+'">'+(findings.some(f=>f.id===x.findingId)?'Открыть замечание':'Создать замечание')+'</button><button class="smallbtn" data-action="delete-photo" data-id="'+id+'">Удалить снимок</button></div></div></div>';
+    '<div class="actions"><button type="button" class="smallbtn" data-photo-edit="'+id+'">Разметить</button>'+
+    (photoCategory(x)==='defects'?'<button type="button" class="smallbtn" data-photo-finding="'+id+'">'+(findings.some(f=>f.id===x.findingId)?'Редактировать замечание':'Создать замечание')+'</button>':'')+
+    '<button class="smallbtn" data-action="delete-photo" data-id="'+id+'">Удалить снимок</button></div>'+
+    (editingPhotoFindingId===x.id&&photoCategory(x)==='defects'?renderPhotoFindingEditor(x):'')+'</div></div>';
   }).join('');
   return '<section class="panel"><h2>Фотографии по электрощитам</h2>'+selectField('Электрощит','photoPicker.board',selectedPhotoHall,boardOptions())+
     '<div class="photo-categories-v08">'+categories.map(([k,l])=>card(k,l)).join('')+card('inbox','Сделать фото')+'</div>'+
     (photoView==='inbox'&&photoSourcesOpen?'<div class="actions"><button type="button" class="btn light" data-photo-picker="cameraUpload">Одиночный кадр</button><button type="button" class="btn" data-photo-camera>Серия фото</button><button type="button" class="btn secondary" data-photo-picker="imageUpload">Из галереи / файл</button></div><input id="imageUpload" type="file" accept="image/*" multiple hidden><input id="cameraUpload" type="file" accept="image/*" capture="environment" hidden><p class="hint">Снимки сначала попадут сюда. У каждого выберите нужную категорию.</p>':'')+
     (rows||'<div class="empty">В этом разделе пока нет снимков.</div>')+'</section>';
+}
+// Inline findings belong to the same board as the photograph. Reusing a
+// description from another board creates an independent finding record.
+function renderPhotoFindingEditor(photo){
+  const current=project.findings.find(f=>f.id===photo.findingId&&f.hallId===photo.hallId&&f.panelId===photo.panelId);
+  const templates=project.findings.filter(f=>f.id!==current?.id&&String(f.description||'').trim());
+  return '<div class="photo-finding-editor" data-finding-photo-editor="'+html(photo.id)+'">'+
+    '<h4>'+(current?'Изменить замечание':'Новое замечание по этому щиту')+'</h4>'+
+    '<div class="field"><label>Использовать ранее созданный текст</label><select data-photo-template><option value="">Написать самостоятельно</option>'+
+    templates.map(f=>{const h=findHall(f.hallId),p=h?.panels.find(x=>x.id===f.panelId);return '<option value="'+html(f.id)+'">'+html((p?boardName(h,p):'Другой щит')+' — '+f.description.slice(0,95))+'</option>';}).join('')+'</select></div>'+
+    '<div class="field"><label>Приоритет</label><select data-finding-field="priority">'+severityOptions(current?.priority||'p2')+'</select></div>'+
+    '<div class="field"><label>Обнаруженный дефект / факт</label><textarea data-finding-field="description" placeholder="Опишите выявленное нарушение">'+html(current?.description||'')+'</textarea></div>'+
+    '<div class="field"><label>Рекомендация по устранению</label><textarea data-finding-field="recommendation">'+html(current?.recommendation||'')+'</textarea></div>'+
+    '<div class="field"><label>Обоснование приоритета (необязательно)</label><textarea data-finding-field="reason">'+html(current?.reason||'')+'</textarea></div>'+
+    '<div class="actions"><button class="btn" type="button" data-photo-save-finding="'+html(photo.id)+'">'+(current?'Сохранить изменения':'Сохранить замечание')+'</button>'+
+    '<button class="btn secondary" type="button" data-photo-cancel-finding>Отмена</button></div>'+
+    '<p class="hint">Замечание сохранится в общем списке, а это фото будет к нему прикреплено. При копировании для другого щита статус и фотографии остаются независимыми.</p></div>';
 }
 const selection=()=>{const b=boardEntries().find(({h,p})=>h.id+'|'+p.id===selectedPhotoHall);return b?{owner:project,hallId:b.h.id,panelId:b.p.id}:null};
 function addToInbox(target,frames){
@@ -204,17 +226,54 @@ function editPhoto(id){
   base.onerror=()=>{status.textContent='Не удалось открыть снимок.';};base.src=x.data;
 }
 document.addEventListener('click',e=>{
-  const b=e.target.closest('[data-photo-view],[data-photo-picker],[data-photo-camera],[data-photo-edit]');
+  const b=e.target.closest('[data-photo-view],[data-photo-picker],[data-photo-camera],[data-photo-edit],[data-photo-finding],[data-photo-save-finding],[data-photo-cancel-finding]');
   if(!b)return;
   if(b.hasAttribute('data-photo-view')){const next=b.dataset.photoView;photoSourcesOpen=next==='inbox'&&(photoView!=='inbox'||!photoSourcesOpen);photoView=next;render();if(next==='inbox')document.querySelector('[data-photo-view="inbox"]')?.focus();}
   else if(b.hasAttribute('data-photo-picker'))el(b.dataset.photoPicker)?.click();
   else if(b.hasAttribute('data-photo-camera'))openPhotoCamera();
+  else if(b.hasAttribute('data-photo-finding')){
+    const id=b.dataset.photoFinding;
+    editingPhotoFindingId=editingPhotoFindingId===id?'':id;
+    render();
+    if(editingPhotoFindingId)document.querySelector('[data-finding-photo-editor="'+id+'"]')?.scrollIntoView({block:'nearest'});
+  }
+  else if(b.hasAttribute('data-photo-cancel-finding')){editingPhotoFindingId='';render();}
+  else if(b.hasAttribute('data-photo-save-finding')){
+    const photo=project.photos.find(x=>x.id===b.dataset.photoSaveFinding);
+    const editor=b.closest('[data-finding-photo-editor]');
+    if(!photo||!editor)return;
+    const val=k=>editor.querySelector('[data-finding-field="'+k+'"]')?.value||'';
+    const description=val('description').trim(),recommendation=val('recommendation').trim(),reason=val('reason').trim();
+    if(!description){notify('Опишите обнаруженный дефект');editor.querySelector('[data-finding-field="description"]')?.focus();return;}
+    const existing=project.findings.find(f=>f.id===photo.findingId&&f.hallId===photo.hallId&&f.panelId===photo.panelId);
+    let finding=existing;
+    if(!finding){
+      finding={id:ID(),hallId:photo.hallId,panelId:photo.panelId,priority:'p2',description:'',recommendation:'',reason:'',due:'',owner:''};
+      project.findings.push(finding);
+    }
+    finding.priority=val('priority');finding.description=description;finding.recommendation=recommendation;finding.reason=reason;
+    photo.findingId=finding.id;
+    const panel=findPanel(photo.hallId,photo.panelId);
+    if(panel&&panel.inspection!=='issues')panel.inspection='issues';
+    editingPhotoFindingId='';
+    scheduleSave();render();notify(existing?'Замечание обновлено':'Замечание создано и связано с фотографией');
+  }
   else editPhoto(b.dataset.photoEdit);
 });
 document.addEventListener('change',async e=>{
+  if(e.target.matches('[data-photo-template]')){
+    const editor=e.target.closest('[data-finding-photo-editor]'),source=project.findings.find(f=>f.id===e.target.value);
+    if(!editor||!source)return;
+    for(const key of ['description','recommendation','reason','priority']){
+      const input=editor.querySelector('[data-finding-field="'+key+'"]');
+      if(input)input.value=source[key]|| (key==='priority'?'p2':'');
+    }
+    return;
+  }
   if(!e.target.matches('[data-photo-move]'))return;
   const x=project.photos.find(x=>String(x.id)===e.target.dataset.photoMove),k=e.target.value;
   if(!x||!(k==='inbox'||isCategory(k)))return;
   x.category=k;x.type=k==='thermal'?'thermal':'regular';
+  if(editingPhotoFindingId===x.id)editingPhotoFindingId='';
   const ok=await persist();render();if(ok)notify(k==='inbox'?'Снимок возвращён в неразобранные':'Снимок перенесён в «'+categories.find(([c])=>c===k)[1]+'»');
 });
