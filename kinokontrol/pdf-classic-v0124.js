@@ -47,10 +47,11 @@ async function createOriginalPDF(type){
   // iOS Safari can silently return an all-white canvas if the report is too large.
   if(!image.width||!image.height)throw new Error('Safari не смог обработать размер отчёта');
   const context=image.getContext('2d',{willReadFrequently:true});
-  const candidates=[[100,100],[180,140],[240,220],[400,300],[120,450]].filter(([x,y])=>x<image.width&&y<image.height);
+  const rw=Math.min(image.width,780),rh=Math.min(image.height,600);
+  const pixels=context.getImageData(0,0,rw,rh).data;
   let visible=false;
-  for(const [x,y] of candidates){const pixel=context.getImageData(x,y,1,1).data;if(pixel[0]<245||pixel[1]<245||pixel[2]<245){visible=true;break;}}
-  if(!visible){const text=doc.body.innerText||'';if(text.length>100)throw new Error('Safari создал пустую страницу. Попробуйте отчёт с меньшим числом фотографий');}
+  for(let y=0;y<rh&&!visible;y+=5){for(let x=0;x<rw;x+=5){const i=(y*rw+x)*4;if(pixels[i]<225||pixels[i+1]<225||pixels[i+2]<225){visible=true;break;}}}
+  if(!visible)throw new Error('Safari сформировал пустое изображение отчёта');
   const blob=await win.html2pdf().set(options).from(doc.body).outputPdf('blob');
   if(!blob||blob.size<100)throw new Error('Пустой PDF');
   return blob;
