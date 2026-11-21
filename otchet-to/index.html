@@ -2479,12 +2479,8 @@ function appendSummaryNotes(C,items){
       if(!content().querySelector('.pdf-notes-box'))content().querySelector('.pdf-summary-notes-title')?.remove();
       newPage();prefix();
     };
-    // Prefer keeping a short note intact on the next page.
-    if(content().querySelector('.pdf-two-col')||content().querySelector('.pdf-notes-box'))tryFresh();
-    box=appendBox(label,text);
-    if(fits())continue;
-    box.remove();
-    // This note is too long even for a fresh page. Split on word boundaries.
+    // Split across available space before making a new page. A long
+    // description should start directly under the measurements if possible.
     // A short heading and some actual text must always appear together.
     const words=text.match(/\S+\s*/gu)||[text];
     let pos=0,continuation=false;
