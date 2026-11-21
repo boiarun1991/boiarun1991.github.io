@@ -1,4 +1,4 @@
-/* 0.12.4: export with original HTML report styling */
+/* 0.12.6: keep report inside Safari viewport and detect blank render */
 (()=>{
 'use strict';
 let savedBlob=null,savedName='';
@@ -15,7 +15,7 @@ function loadLibrary(win){
 function newFrame(markup){
  const frame=document.createElement('iframe');
  frame.setAttribute('aria-hidden','true');
- frame.style.cssText='position:fixed;top:0;left:-10000px;width:794px;height:1123px;border:0;opacity:0;pointer-events:none;z-index:-1';
+ frame.style.cssText='position:fixed;top:0;left:0;width:794px;height:100vh;border:0;background:white;opacity:1;pointer-events:none;z-index:9998';
  document.body.appendChild(frame);
  const doc=frame.contentDocument;
  doc.open();doc.write(markup);doc.close();
@@ -43,6 +43,14 @@ async function createOriginalPDF(type){
    jsPDF:{unit:'mm',format:'a4',orientation:'portrait',compress:true},
    pagebreak:{mode:'css',before:'.pagebreak',avoid:'tr,.photo,.signature,h2,h3'}
   };
+  const image=await win.html2canvas(doc.body,{scale:1,useCORS:true,backgroundColor:'#ffffff',logging:false,scrollY:0,windowWidth:794});
+  // iOS Safari can silently return an all-white canvas if the report is too large.
+  if(!image.width||!image.height)throw new Error('Safari не смог обработать размер отчёта');
+  const context=image.getContext('2d',{willReadFrequently:true});
+  const candidates=[[100,100],[180,140],[240,220],[400,300],[120,450]].filter(([x,y])=>x<image.width&&y<image.height);
+  let visible=false;
+  for(const [x,y] of candidates){const pixel=context.getImageData(x,y,1,1).data;if(pixel[0]<245||pixel[1]<245||pixel[2]<245){visible=true;break;}}
+  if(!visible){const text=doc.body.innerText||'';if(text.length>100)throw new Error('Safari создал пустую страницу. Попробуйте отчёт с меньшим числом фотографий');}
   const blob=await win.html2pdf().set(options).from(doc.body).outputPdf('blob');
   if(!blob||blob.size<100)throw new Error('Пустой PDF');
   return blob;
