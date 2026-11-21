@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-report-version="2" data-release="2.5.7">
+<html lang="ru" data-report-version="2" data-release="2.5.8">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="Отчёт ТО"/>
 <meta name="theme-color" content="#0F1C2E"/>
-<title>Акт ТО ЦКП · 2.5.7</title>
+<title>Акт ТО ЦКП · 2.5.8</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -437,7 +437,7 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 
 <div class="main">
 <section class="section-card active archive-home" id="reportHome" aria-labelledby="archiveTitle">
-  <div class="sec-header"><h2 class="sec-title" id="archiveTitle">Отчёты ТО</h2><span class="sec-title">2.5.7</span></div>
+  <div class="sec-header"><h2 class="sec-title" id="archiveTitle">Отчёты ТО</h2><span class="sec-title">2.5.8</span></div>
   <div class="sec-body">
     <div class="module-actions"><button class="btn btn-primary" type="button" id="newReport" disabled>Новый отчёт</button>
       <button class="btn btn-ghost" type="button" id="resumeReport" disabled>Продолжить последний</button></div>
@@ -2435,11 +2435,82 @@ function appendSummary(C,h,i){
   const table=(heading,unit,rows)=>'<div><div class="pdf-col-title">'+heading+'</div><table class="pdf-table"><thead><tr><th>Параметр</th><th>До, '+unit+'</th><th>После, '+unit+'</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
   const audio=AUDIO_CHANNELS.map(ch=>row(ch.name,f['ach_'+ch.id+'_b'],f['ach_'+ch.id+'_a'])).join('');
   const notes=summaryNotes(h);
-  if(!notes.length)notes.push(['Неисправности, замены и примечания','Нет данных']);
   const intro='<div class="pdf-two-col">'+summaryBrightnessTable(h)+table('Звук','дБ',audio)+'</div>';
-  const inline=notes.length<=4&&notes.every(([,v])=>v.length<=120&&!v.includes('\n'));
-  C.insertAdjacentHTML('beforeend',pdfPage('',projectorLabel(h,i),intro+(inline?notesMarkup(notes):'')));
-  if(!inline)appendNotesPages(C,'Сводка · неисправности, замены и примечания',notes);
+  C.insertAdjacentHTML('beforeend',pdfPage('',projectorLabel(h,i),intro));
+  if(notes.length)appendSummaryNotes(C,notes);
+}
+// Put remarks in the remaining space after the hall measurements. If a note
+// does not fit, keep its heading and at least some text on the same page, then
+// continue on the next page. Do not create empty continuation pages.
+function appendSummaryNotes(C,items){
+  const limit=794, title='Сводка · неисправности, замены и примечания';
+  let page=C.lastElementChild;
+  const content=()=>page.querySelector('.pdf-content');
+  const fits=()=>page.getBoundingClientRect().height<=limit+0.5;
+  const newPage=()=>{
+    C.insertAdjacentHTML('beforeend',pdfPage('',title,''));
+    page=C.lastElementChild;
+  };
+  const appendBox=(label,value)=>{
+    const el=document.createElement('div');
+    el.className='pdf-notes-box';
+    el.style.breakInside='avoid';
+    const h=document.createElement('h4');h.textContent=label;
+    const t=document.createElement('div');t.className='pdf-notes-text';t.textContent=value;
+    el.append(h,t);content().append(el);
+    return el;
+  };
+  const prefix=()=>{
+    if(content().querySelector('.pdf-summary-notes-title'))return;
+    const heading=document.createElement('div');
+    heading.className='pdf-col-title pdf-summary-notes-title';
+    heading.textContent='Неисправности, замены и примечания';
+    content().append(heading);
+  };
+  for(const [label,value] of items){
+    const text=String(value??'').trim();
+    if(!text)continue;
+    prefix();
+    let box=appendBox(label,text);
+    if(fits())continue;
+    box.remove();
+    const tryFresh=()=>{
+      // Remove a stranded heading if no note fits below it.
+      if(!content().querySelector('.pdf-notes-box'))content().querySelector('.pdf-summary-notes-title')?.remove();
+      newPage();prefix();
+    };
+    // Prefer keeping a short note intact on the next page.
+    if(content().querySelector('.pdf-two-col')||content().querySelector('.pdf-notes-box'))tryFresh();
+    box=appendBox(label,text);
+    if(fits())continue;
+    box.remove();
+    // This note is too long even for a fresh page. Split on word boundaries.
+    // A short heading and some actual text must always appear together.
+    const words=text.match(/\S+\s*/gu)||[text];
+    let pos=0,continuation=false;
+    while(pos<words.length){
+      prefix();
+      let lo=1,hi=words.length-pos,best=0;
+      while(lo<=hi){
+        const mid=(lo+hi)>>1;
+        const fragment=words.slice(pos,pos+mid).join('').trimEnd();
+        const probe=appendBox(continuation?label+' (продолжение)':label,fragment);
+        const ok=fits();probe.remove();
+        if(ok){best=mid;lo=mid+1;}else hi=mid-1;
+      }
+      if(!best){
+        // On a partly filled page the note starts on the next page.
+        if(content().querySelector('.pdf-notes-box')||content().querySelector('.pdf-two-col')){
+          tryFresh();continue;
+        }
+        // Extremely long unbroken words: preserve all text without looping.
+        best=1;
+      }
+      appendBox(continuation?label+' (продолжение)':label,words.slice(pos,pos+best).join('').trimEnd());
+      pos+=best;continuation=true;
+      if(pos<words.length)newPage();
+    }
+  }
 }
 
 function buildPDFPages(mode='full',selected=null,prepared=null){
