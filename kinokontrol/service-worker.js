@@ -1,4 +1,4 @@
-const CACHE='kinokontrol-v0125-1';
+const CACHE='kinokontrol-v0126-1';
 const ASSETS=['./','./index.html','./manifest.webmanifest','./icon.svg','./photos-v0121.js','./pdf-export-v0123.js','./pdf-classic-v0124.js'];
 const scope=new URL(self.registration.scope);
 const assets=new Set(ASSETS.map(x=>new URL(x,scope).href));
