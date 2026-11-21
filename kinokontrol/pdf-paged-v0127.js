@@ -63,7 +63,7 @@ function stage(){
  message.textContent='Подготовка страниц PDF…';
  curtain.append(message);
  const host=document.createElement('div');
- host.style.cssText='position:absolute;left:0;top:0;width:690px;background:white;padding:0;color:#1b2737;font:13.3px/1.42 Arial,sans-serif;transform-origin:top left;transform:scale(.46);';
+ host.style.cssText='position:absolute;left:0;top:0;width:690px;background:white;padding:0;color:#1b2737;font:13.3px/1.42 Arial,sans-serif;';
  host.innerHTML='<style>*,*:before,*:after{box-sizing:border-box}h1{font-size:25px;line-height:1.18;letter-spacing:-.2px;margin:0 0 18px}h2{font-size:17px;margin:18px 0 9px;border-bottom:1px solid #b6c4d4;padding-bottom:5px}h3{font-size:14.3px;margin:15px 0 6px}p{white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0 10px}table{border-collapse:collapse;width:100%;table-layout:fixed;margin:8px 0 12px;font-size:11.3px}td,th{border:1px solid #b7c1cf;padding:6px 7px;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{background:#eff3f7;font-weight:600}small{color:#596b80}.photo{display:inline-block;width:46%;margin:6px 1%;vertical-align:top}.photo img{display:block;width:100%;max-height:280px;object-fit:contain}.photo figcaption{font-size:11.3px;overflow-wrap:anywhere}</style><div id="page-content"></div>';
  curtain.append(host);document.body.append(curtain);
  return {curtain,message,slot:host.querySelector('#page-content')};
