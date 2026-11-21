@@ -36,12 +36,12 @@ async function createOriginalPDF(type){
   await imageReady(doc);
   await new Promise(r=>setTimeout(r,100));
   const options={
-   margin:[14,15,14,15],
+   margin:14,
    filename:'report.pdf',
    image:{type:'jpeg',quality:0.89},
    html2canvas:{scale:1.45,useCORS:true,backgroundColor:'#ffffff',logging:false,scrollY:0,windowWidth:794},
    jsPDF:{unit:'mm',format:'a4',orientation:'portrait',compress:true},
-   pagebreak:{mode:['css','legacy'],before:'.pagebreak',avoid:['tr','.photo','.signature','h2','h3']}
+   pagebreak:{mode:'css',before:'.pagebreak',avoid:'tr,.photo,.signature,h2,h3'}
   };
   const blob=await win.html2pdf().set(options).from(doc.body).outputPdf('blob');
   if(!blob||blob.size<100)throw new Error('Пустой PDF');
