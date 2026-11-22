@@ -65,6 +65,8 @@ fullReport=function compactFullReport(){
   body+='</section>';
  }
  body+='<div class="signature">'+signatures()+'</div><p><small>Обследование проводится без отключения и вмешательства в электрооборудование. Документ отражает только внесённые результаты фактически выполненных работ и не заменяет протоколы специализированных испытаний.</small></p>';
- return reportShell(body,'Полный технический отчёт');
+ const output=reportShell(body,'Полный технический отчёт');
+ const compactCSS='<style>body h2{margin:4mm 0 2mm;padding-bottom:1.5mm}body h3{margin:3mm 0 1.5mm}body table{margin:1.2mm 0 2mm;font-size:8pt}body td,body th{padding:1.1mm 1.5mm}body p{margin:1.3mm 0 2mm}body .photo{margin:1mm 1%;width:46%}body .photo img{max-height:53mm}body .photo figcaption{font-size:8pt}</style>';
+ return output.replace('</head>',compactCSS+'</head>');
 };
 })();
