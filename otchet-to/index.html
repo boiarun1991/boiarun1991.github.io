@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-report-version="2" data-release="2.5.8">
+<html lang="ru" data-report-version="2" data-release="2.5.9">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -7,7 +7,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="Отчёт ТО"/>
 <meta name="theme-color" content="#0F1C2E"/>
-<title>Акт ТО ЦКП · 2.5.8</title>
+<link rel="manifest" href="/otchet-to/manifest.webmanifest"/>
+<link rel="apple-touch-icon" href="/otchet-to/icon-192.png"/>
+<title>Акт ТО ЦКП · 2.5.9</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -437,7 +439,7 @@ html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 
 <div class="main">
 <section class="section-card active archive-home" id="reportHome" aria-labelledby="archiveTitle">
-  <div class="sec-header"><h2 class="sec-title" id="archiveTitle">Отчёты ТО</h2><span class="sec-title">2.5.8</span></div>
+  <div class="sec-header"><h2 class="sec-title" id="archiveTitle">Отчёты ТО</h2><span class="sec-title">2.5.9</span></div>
   <div class="sec-body">
     <div class="module-actions"><button class="btn btn-primary" type="button" id="newReport" disabled>Новый отчёт</button>
       <button class="btn btn-ghost" type="button" id="resumeReport" disabled>Продолжить последний</button></div>
@@ -2898,6 +2900,7 @@ async function saveAsHTML(){
 }
 
 init();
+if (location.protocol === "https:" && location.pathname.startsWith("/otchet-to/") && "serviceWorker" in navigator) navigator.serviceWorker.register("/otchet-to/service-worker.js").catch(console.warn);
 </script>
 </body>
 </html>
